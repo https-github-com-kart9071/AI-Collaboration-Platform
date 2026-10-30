@@ -80,3 +80,8 @@ Logs are written to `%APPDATA%\AICollaborationPlatform\logs\`, one file per day 
 7. Export (CSV / Excel / JSON)
 8. Windows installer
 9. AI insights (Python backend)
+
+## License
+
+MIT. See [LICENSE](LICENSE).
+

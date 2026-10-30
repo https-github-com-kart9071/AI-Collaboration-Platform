@@ -1,0 +1,86 @@
+<Window x:Class="AICollaborationPlatform.App.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:AICollaborationPlatform.App.ViewModels"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
+        Title="{Binding AppTitle}"
+        Width="1100" Height="700" MinWidth="800" MinHeight="500"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource ContentBrush}"
+        FontFamily="Segoe UI">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="220" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Sidebar -->
+        <DockPanel Grid.Column="0" Grid.RowSpan="2" Background="{StaticResource SidebarBrush}">
+            <StackPanel DockPanel.Dock="Top" Margin="20,24,20,24">
+                <TextBlock Text="AI Collaboration" Foreground="White" FontSize="18" FontWeight="SemiBold" />
+                <TextBlock Text="Platform" Foreground="{StaticResource SidebarTextBrush}" FontSize="13" />
+            </StackPanel>
+
+            <TextBlock DockPanel.Dock="Bottom" Margin="20,0,20,16" FontSize="11"
+                       Foreground="{StaticResource SidebarTextBrush}" Opacity="0.7"
+                       Text="{Binding Version, StringFormat=Version {0}}" />
+
+            <ListBox ItemsSource="{Binding NavigationItems}"
+                     SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                     Background="Transparent" BorderThickness="0"
+                     AutomationProperties.Name="Navigation">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="IsEnabled" Value="{Binding IsEnabled}" />
+                        <Setter Property="AutomationProperties.Name" Value="{Binding Title}" />
+                        <Setter Property="Cursor" Value="Hand" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <Border x:Name="Bd" Margin="10,2" Padding="12,10" CornerRadius="6" Background="Transparent">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding Glyph}" FontFamily="{StaticResource IconFont}" FontSize="16"
+                                                       Foreground="{StaticResource SidebarTextBrush}" VerticalAlignment="Center" x:Name="Icon" />
+                                            <TextBlock Text="{Binding Title}" Margin="12,0,0,0" FontSize="14"
+                                                       Foreground="{StaticResource SidebarTextBrush}" VerticalAlignment="Center" x:Name="Label" />
+                                        </StackPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource SidebarHoverBrush}" />
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentBrush}" />
+                                            <Setter TargetName="Icon" Property="Foreground" Value="White" />
+                                            <Setter TargetName="Label" Property="Foreground" Value="White" />
+                                        </Trigger>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter TargetName="Bd" Property="Opacity" Value="0.4" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+            </ListBox>
+        </DockPanel>
+
+        <!-- Content: the DataTemplates in App.xaml pick the view for CurrentPage -->
+        <ContentControl Grid.Column="1" Grid.Row="0" Margin="32,28" Content="{Binding CurrentPage}" Focusable="False" />
+
+        <!-- Status bar -->
+        <Border Grid.Column="1" Grid.Row="1" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0"
+                Background="{StaticResource CardBrush}" Padding="16,6">
+            <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="12"
+                       Text="{Binding CurrentPage.Title, StringFormat=Ready · {0}}" />
+        </Border>
+    </Grid>
+</Window>

@@ -72,7 +72,7 @@ Logs are written to `%APPDATA%\AICollaborationPlatform\logs\`, one file per day 
 ## Roadmap
 
 1. ✅ Project setup and app shell
-2. Jira connection dialog (URL, auth type, token, Test Connection)
+2. ✅ Jira connection dialog (URL, auth type, token, Test Connection)
 3. Store credentials securely (Windows Credential Manager)
 4. Jira API client service
 5. Fetch all Jira data into SQLite

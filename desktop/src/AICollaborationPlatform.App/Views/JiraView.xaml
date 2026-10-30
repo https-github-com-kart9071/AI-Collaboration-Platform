@@ -3,16 +3,51 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <StackPanel>
         <TextBlock Text="Jira" FontSize="26" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
-        <TextBlock Margin="0,6,0,24" FontSize="14" Foreground="{StaticResource TextSecondaryBrush}"
-                   Text="{Binding ConnectionStatus, StringFormat=Status: {0}}" />
 
-        <Border Style="{StaticResource Card}" MaxWidth="520" HorizontalAlignment="Left">
+        <!-- Status line with a coloured dot -->
+        <StackPanel Orientation="Horizontal" Margin="0,8,0,24">
+            <Ellipse Width="9" Height="9" VerticalAlignment="Center">
+                <Ellipse.Style>
+                    <Style TargetType="Ellipse">
+                        <Setter Property="Fill" Value="{StaticResource InputBorderBrush}" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                <Setter Property="Fill" Value="{StaticResource SuccessBrush}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Ellipse.Style>
+            </Ellipse>
+            <TextBlock Margin="8,0,0,0" FontSize="14" Foreground="{StaticResource TextSecondaryBrush}"
+                       Text="{Binding ConnectionStatus}" />
+        </StackPanel>
+
+        <!-- Not connected -->
+        <Border Style="{StaticResource Card}" MaxWidth="520" HorizontalAlignment="Left"
+                Visibility="{Binding IsConnected, Converter={StaticResource InverseBoolToVisibility}}">
             <StackPanel>
                 <TextBlock Text="Connect to Jira" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
                 <TextBlock Margin="0,8,0,18" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"
-                           Text="Enter your Jira URL and credentials to connect. The connection dialog is coming in the next story." />
-                <Button Content="Connect…" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left" IsEnabled="False"
-                        ToolTipService.ShowOnDisabled="True" ToolTip="Coming in Story 2" />
+                           Text="Enter your Jira URL and credentials to connect. Works with Jira Cloud and Jira Server / Data Center." />
+                <Button Content="Connect…" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left"
+                        Command="{Binding ConnectCommand}" AutomationProperties.Name="Connect to Jira" />
+            </StackPanel>
+        </Border>
+
+        <!-- Connected -->
+        <Border Style="{StaticResource Card}" MaxWidth="520" HorizontalAlignment="Left"
+                Visibility="{Binding IsConnected, Converter={StaticResource BoolToVisibility}}">
+            <StackPanel>
+                <TextBlock Text="Connected" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
+                <TextBlock Margin="0,8,0,0" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" Text="Jira site" />
+                <TextBlock Margin="0,2,0,18" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}"
+                           Text="{Binding ConnectedUrl}" TextTrimming="CharacterEllipsis" />
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Change connection…" Style="{StaticResource SecondaryButton}"
+                            Command="{Binding ConnectCommand}" />
+                    <Button Content="Disconnect" Style="{StaticResource SecondaryButton}" Margin="8,0,0,0"
+                            Command="{Binding DisconnectCommand}" />
+                </StackPanel>
             </StackPanel>
         </Border>
     </StackPanel>

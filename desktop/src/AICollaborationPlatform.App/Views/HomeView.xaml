@@ -1,0 +1,27 @@
+<UserControl x:Class="AICollaborationPlatform.App.Views.HomeView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel>
+        <TextBlock Text="Welcome to AI Collaboration Platform" FontSize="26" FontWeight="SemiBold"
+                   Foreground="{StaticResource TextPrimaryBrush}" />
+        <TextBlock Margin="0,6,0,24" FontSize="14" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"
+                   Text="Connect your work tools, bring their data together, and analyze it with AI." />
+
+        <Border Style="{StaticResource Card}" MaxWidth="520" HorizontalAlignment="Left">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE71B;" FontFamily="{StaticResource IconFont}" FontSize="22"
+                               Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                    <TextBlock Text="Jira" Margin="10,0,0,0" FontSize="18" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBlock Margin="0,8,0,18" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"
+                           Text="Connect to your Jira Cloud or Jira Server instance to fetch projects, issues, sprints and comments." />
+                <!-- MainWindow's DataContext (MainViewModel) owns navigation -->
+                <Button Content="Jira" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left"
+                        AutomationProperties.Name="Open Jira"
+                        Command="{Binding DataContext.OpenJiraCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

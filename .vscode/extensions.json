@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "ms-dotnettools.csdevkit"
+  ],
+  "unwantedRecommendations": [
+    "noesistechnologies.noesisgui-tools"
+  ]
+}

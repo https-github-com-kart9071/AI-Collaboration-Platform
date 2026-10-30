@@ -1,0 +1,8 @@
+{
+  // These are WPF XAML files. Treating them as XML stops the NoesisGUI extension
+  // (a game-UI XAML dialect) from flagging valid WPF markup as errors.
+  "files.associations": {
+    "*.xaml": "xml"
+  },
+  "dotnet.defaultSolution": "desktop/AICollaborationPlatform.slnx"
+}

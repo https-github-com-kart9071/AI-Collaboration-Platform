@@ -1,0 +1,65 @@
+﻿<Application x:Class="AICollaborationPlatform.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:AICollaborationPlatform.App.ViewModels"
+             xmlns:views="clr-namespace:AICollaborationPlatform.App.Views"
+             ShutdownMode="OnMainWindowClose">
+    <Application.Resources>
+        <!-- Theme -->
+        <SolidColorBrush x:Key="SidebarBrush" Color="#1F2430" />
+        <SolidColorBrush x:Key="SidebarHoverBrush" Color="#2C3342" />
+        <SolidColorBrush x:Key="SidebarTextBrush" Color="#C9CFDB" />
+        <SolidColorBrush x:Key="AccentBrush" Color="#4C6FFF" />
+        <SolidColorBrush x:Key="ContentBrush" Color="#F5F6FA" />
+        <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="BorderBrush" Color="#E2E5EC" />
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#1B1F29" />
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#5E6575" />
+        <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+            <Setter Property="Padding" Value="18,9" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.88" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.75" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.4" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource CardBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="24" />
+        </Style>
+
+        <!-- Page view model -> view mapping used by the main content area -->
+        <DataTemplate DataType="{x:Type vm:HomeViewModel}">
+            <views:HomeView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:JiraViewModel}">
+            <views:JiraView />
+        </DataTemplate>
+    </Application.Resources>
+</Application>

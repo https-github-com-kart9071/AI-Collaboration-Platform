@@ -9,10 +9,14 @@ namespace AICollaborationPlatform.App.ViewModels;
 public sealed partial class MainViewModel : ObservableObject
 {
     private readonly INavigationService _navigation;
+    private readonly IJiraSession _jiraSession;
+    private readonly IDialogService _dialogs;
 
-    public MainViewModel(INavigationService navigation)
+    public MainViewModel(INavigationService navigation, IJiraSession jiraSession, IDialogService dialogs)
     {
         _navigation = navigation;
+        _jiraSession = jiraSession;
+        _dialogs = dialogs;
         _navigation.CurrentPageChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(CurrentPage));
@@ -51,6 +55,18 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// The Home page's Jira button: go to the Jira page and, if not connected yet,
+    /// open the connection dialog straight away.
+    /// </summary>
     [RelayCommand]
-    private void OpenJira() => _navigation.NavigateTo<JiraViewModel>();
+    private void OpenJira()
+    {
+        _navigation.NavigateTo<JiraViewModel>();
+
+        if (!_jiraSession.IsConnected)
+        {
+            _dialogs.ShowJiraConnectionDialog();
+        }
+    }
 }

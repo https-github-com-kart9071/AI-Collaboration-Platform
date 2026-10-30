@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:AICollaborationPlatform.App.ViewModels"
              xmlns:views="clr-namespace:AICollaborationPlatform.App.Views"
+             xmlns:conv="clr-namespace:AICollaborationPlatform.App.Converters"
              ShutdownMode="OnMainWindowClose">
     <Application.Resources>
         <!-- Theme -->
@@ -15,7 +16,18 @@
         <SolidColorBrush x:Key="BorderBrush" Color="#E2E5EC" />
         <SolidColorBrush x:Key="TextPrimaryBrush" Color="#1B1F29" />
         <SolidColorBrush x:Key="TextSecondaryBrush" Color="#5E6575" />
+        <SolidColorBrush x:Key="InputBorderBrush" Color="#C9CED8" />
+        <SolidColorBrush x:Key="SuccessBrush" Color="#1E8E3E" />
+        <SolidColorBrush x:Key="SuccessBackgroundBrush" Color="#E8F5EC" />
+        <SolidColorBrush x:Key="ErrorBrush" Color="#C5221F" />
+        <SolidColorBrush x:Key="ErrorBackgroundBrush" Color="#FCE8E6" />
+        <SolidColorBrush x:Key="InfoBackgroundBrush" Color="#EEF1FF" />
         <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+
+        <!-- Converters -->
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+        <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisibility" />
+        <conv:StringToVisibilityConverter x:Key="StringToVisibility" />
 
         <Style x:Key="PrimaryButton" TargetType="Button">
             <Setter Property="Foreground" Value="White" />
@@ -52,6 +64,144 @@
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="8" />
             <Setter Property="Padding" Value="24" />
+        </Style>
+
+        <!-- White button with a border, for secondary actions next to a PrimaryButton -->
+        <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Setter Property="Background" Value="{StaticResource CardBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6"
+                                BorderBrush="{StaticResource InputBorderBrush}" BorderThickness="1"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource ContentBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource BorderBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.4" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Borderless square button holding one icon glyph -->
+        <Style x:Key="IconButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+            <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource ContentBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Text inputs: rounded border that turns accent-blue on focus.
+             TextBox and PasswordBox apply Padding inside PART_ContentHost themselves, so it isn't repeated here. -->
+        <ControlTemplate x:Key="InputTemplate" TargetType="Control">
+            <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="1" CornerRadius="6">
+                <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center" />
+            </Border>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource TextSecondaryBrush}" />
+                </Trigger>
+                <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                    <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                    <Setter TargetName="Bd" Property="BorderThickness" Value="2" />
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter TargetName="Bd" Property="Opacity" Value="0.5" />
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+        <Style x:Key="TextInput" TargetType="TextBox">
+            <Setter Property="Background" Value="{StaticResource CardBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource InputBorderBrush}" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="Template" Value="{StaticResource InputTemplate}" />
+        </Style>
+
+        <Style x:Key="PasswordInput" TargetType="PasswordBox">
+            <Setter Property="Background" Value="{StaticResource CardBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource InputBorderBrush}" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="Template" Value="{StaticResource InputTemplate}" />
+        </Style>
+
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+        </Style>
+
+        <Style x:Key="FieldError" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{StaticResource ErrorBrush}" />
+            <Setter Property="Margin" Value="0,5,0,0" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Visibility" Value="{Binding Text, RelativeSource={RelativeSource Self}, Converter={StaticResource StringToVisibility}}" />
+        </Style>
+
+        <!-- Radio buttons drawn as one half of a two-option segmented switch -->
+        <Style x:Key="SegmentRadio" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Bd" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource InputBorderBrush}"
+                                BorderThickness="1" CornerRadius="6" Padding="10,8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource ContentBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource InfoBackgroundBrush}" />
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                <Setter TargetName="Bd" Property="BorderThickness" Value="2" />
+                                <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <!-- Page view model -> view mapping used by the main content area -->

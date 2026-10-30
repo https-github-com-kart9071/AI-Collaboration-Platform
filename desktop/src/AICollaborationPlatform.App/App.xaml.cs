@@ -52,6 +52,16 @@ public partial class App : Application
     private static void ConfigureServices(IServiceCollection services)
     {
         services.AddSingleton<INavigationService, NavigationService>();
+        services.AddSingleton<IDialogService, DialogService>();
+
+        // Jira
+        services.AddHttpClient<IJiraConnectionService, JiraConnectionService>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(20);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("AICollaborationPlatform/0.1");
+        });
+        services.AddSingleton<IJiraSession, JiraSession>();
+        services.AddTransient<JiraConnectionViewModel>();
 
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<MainWindow>();

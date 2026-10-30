@@ -1,3 +1,4 @@
+using AICollaborationPlatform.App.Models;
 using AICollaborationPlatform.App.Services;
 using AICollaborationPlatform.App.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,69 +8,98 @@ namespace AICollaborationPlatform.Tests;
 
 public class NavigationTests
 {
-    private static (MainViewModel Main, INavigationService Navigation) CreateSut()
+    private sealed record Sut(MainViewModel Main, INavigationService Navigation, IJiraSession Session, FakeDialogService Dialogs);
+
+    private static Sut CreateSut()
     {
+        var session = TestSession.Create();
+        var dialogs = new FakeDialogService();
         var services = new ServiceCollection()
+            .AddSingleton<IJiraSession>(session)
+            .AddSingleton<IDialogService>(dialogs)
             .AddSingleton<HomeViewModel>()
             .AddSingleton<JiraViewModel>()
             .BuildServiceProvider();
 
         var navigation = new NavigationService(services, NullLogger<NavigationService>.Instance);
-        return (new MainViewModel(navigation), navigation);
+        return new Sut(new MainViewModel(navigation, session, dialogs), navigation, session, dialogs);
     }
 
     [Fact]
     public void Starts_on_home_page()
     {
-        var (main, _) = CreateSut();
+        var sut = CreateSut();
 
-        Assert.IsType<HomeViewModel>(main.CurrentPage);
-        Assert.Equal("Home", main.SelectedItem?.Title);
+        Assert.IsType<HomeViewModel>(sut.Main.CurrentPage);
+        Assert.Equal("Home", sut.Main.SelectedItem?.Title);
     }
 
     [Fact]
     public void Jira_button_navigates_to_jira_page()
     {
-        var (main, _) = CreateSut();
+        var sut = CreateSut();
         var changed = new List<string?>();
-        main.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        sut.Main.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
 
-        main.OpenJiraCommand.Execute(null);
+        sut.Main.OpenJiraCommand.Execute(null);
 
-        Assert.IsType<JiraViewModel>(main.CurrentPage);
-        Assert.Equal("Jira", main.SelectedItem?.Title);
+        Assert.IsType<JiraViewModel>(sut.Main.CurrentPage);
+        Assert.Equal("Jira", sut.Main.SelectedItem?.Title);
         Assert.Contains(nameof(MainViewModel.CurrentPage), changed);
     }
 
     [Fact]
-    public void Selecting_sidebar_item_navigates()
+    public void Jira_button_opens_connection_dialog_when_not_connected()
     {
-        var (main, _) = CreateSut();
+        var sut = CreateSut();
 
-        main.SelectedItem = main.NavigationItems.Single(i => i.Title == "Jira");
+        sut.Main.OpenJiraCommand.Execute(null);
 
-        Assert.IsType<JiraViewModel>(main.CurrentPage);
+        Assert.Equal(1, sut.Dialogs.JiraDialogShownCount);
+    }
+
+    [Fact]
+    public void Jira_button_skips_dialog_when_already_connected()
+    {
+        var sut = CreateSut();
+        sut.Session.Connect(
+            new JiraConnectionSettings(new Uri("https://acme.atlassian.net"), JiraAuthType.Cloud, "a@b.com", "t"),
+            new JiraUser("Alex", null));
+
+        sut.Main.OpenJiraCommand.Execute(null);
+
+        Assert.Equal(0, sut.Dialogs.JiraDialogShownCount);
+    }
+
+    [Fact]
+    public void Selecting_sidebar_item_navigates_without_opening_dialog()
+    {
+        var sut = CreateSut();
+
+        sut.Main.SelectedItem = sut.Main.NavigationItems.Single(i => i.Title == "Jira");
+
+        Assert.IsType<JiraViewModel>(sut.Main.CurrentPage);
+        Assert.Equal(0, sut.Dialogs.JiraDialogShownCount);
     }
 
     [Fact]
     public void Page_state_survives_navigation()
     {
-        var (main, navigation) = CreateSut();
-        main.OpenJiraCommand.Execute(null);
-        var jira = (JiraViewModel)main.CurrentPage!;
-        jira.ConnectionStatus = "Connected";
+        var sut = CreateSut();
+        sut.Navigation.NavigateTo<JiraViewModel>();
+        var jira = sut.Main.CurrentPage;
 
-        navigation.NavigateTo<HomeViewModel>();
-        navigation.NavigateTo<JiraViewModel>();
+        sut.Navigation.NavigateTo<HomeViewModel>();
+        sut.Navigation.NavigateTo<JiraViewModel>();
 
-        Assert.Same(jira, main.CurrentPage);
+        Assert.Same(jira, sut.Main.CurrentPage);
     }
 
     [Fact]
     public void Rejects_types_that_are_not_pages()
     {
-        var (_, navigation) = CreateSut();
+        var sut = CreateSut();
 
-        Assert.Throws<ArgumentException>(() => navigation.NavigateTo(typeof(string)));
+        Assert.Throws<ArgumentException>(() => sut.Navigation.NavigateTo(typeof(string)));
     }
 }

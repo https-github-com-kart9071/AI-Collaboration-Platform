@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:AICollaborationPlatform.App.ViewModels"
+        xmlns:local="clr-namespace:AICollaborationPlatform.App.Views"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:JiraConnectionViewModel}"
         Title="Connect to Jira"
@@ -149,10 +150,9 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- Spinner while working -->
-                    <Viewbox Grid.Column="0" Width="16" Height="16" Margin="0,1,10,0" VerticalAlignment="Top"
-                             RenderTransformOrigin="0.5,0.5">
-                        <Viewbox.Style>
-                            <Style TargetType="Viewbox">
+                    <local:Spinner Grid.Column="0" Margin="0,1,10,0" VerticalAlignment="Top">
+                        <local:Spinner.Style>
+                            <Style TargetType="local:Spinner">
                                 <Setter Property="Visibility" Value="Collapsed" />
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding StatusKind}" Value="Working">
@@ -160,23 +160,8 @@
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
-                        </Viewbox.Style>
-                        <Viewbox.RenderTransform>
-                            <RotateTransform x:Name="SpinnerRotation" />
-                        </Viewbox.RenderTransform>
-                        <Viewbox.Triggers>
-                            <EventTrigger RoutedEvent="Loaded">
-                                <BeginStoryboard>
-                                    <Storyboard RepeatBehavior="Forever">
-                                        <DoubleAnimation Storyboard.TargetName="SpinnerRotation" Storyboard.TargetProperty="Angle"
-                                                         From="0" To="360" Duration="0:0:0.9" />
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </EventTrigger>
-                        </Viewbox.Triggers>
-                        <Path Data="M 8,1 A 7,7 0 1 1 1,8" Stroke="{StaticResource AccentBrush}" StrokeThickness="2"
-                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="16" Height="16" />
-                    </Viewbox>
+                        </local:Spinner.Style>
+                    </local:Spinner>
 
                     <!-- Icon for success / error -->
                     <TextBlock Grid.Column="0" FontFamily="{StaticResource IconFont}" FontSize="16" Margin="0,1,10,0"

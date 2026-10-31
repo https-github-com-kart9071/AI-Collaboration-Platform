@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System.Net.Http;
+using System.Windows;
 using System.Windows.Threading;
 using AICollaborationPlatform.App.Services;
 using AICollaborationPlatform.App.Storage;
@@ -27,6 +28,7 @@ public partial class App : Application
                 AppPaths.LogFile,
                 rollingInterval: RollingInterval.Day,
                 retainedFileCountLimit: 14,
+                shared: true, // lets a second running copy (e.g. one from Visual Studio) log too
                 outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}")
             .CreateLogger();
 
@@ -47,6 +49,9 @@ public partial class App : Application
         var mainWindow = _host.Services.GetRequiredService<MainWindow>();
         MainWindow = mainWindow;
         mainWindow.Show();
+
+        // Reconnect to the saved Jira connection in the background; the Jira page shows progress.
+        _ = _host.Services.GetRequiredService<IJiraSession>().RestoreAsync();
     }
 
     private static void ConfigureServices(IServiceCollection services)
@@ -54,12 +59,20 @@ public partial class App : Application
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IDialogService, DialogService>();
 
+        // Storage: secrets in Windows Credential Manager, everything else in settings.json
+        services.AddSingleton<ICredentialStore, WindowsCredentialStore>();
+        services.AddSingleton<ISettingsStore>(sp =>
+            new JsonSettingsStore(AppPaths.SettingsFile, sp.GetRequiredService<ILogger<JsonSettingsStore>>()));
+
         // Jira
         services.AddHttpClient<IJiraConnectionService, JiraConnectionService>(client =>
-        {
-            client.Timeout = TimeSpan.FromSeconds(20);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("AICollaborationPlatform/0.1");
-        });
+            {
+                client.Timeout = TimeSpan.FromSeconds(20);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("AICollaborationPlatform/0.1");
+            })
+            // JiraSession is a singleton holding this client for the app's lifetime;
+            // recycling pooled connections keeps it picking up DNS changes.
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) });
         services.AddSingleton<IJiraSession, JiraSession>();
         services.AddTransient<JiraConnectionViewModel>();
 

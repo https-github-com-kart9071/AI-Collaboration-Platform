@@ -1,3 +1,4 @@
+using AICollaborationPlatform.App.Models;
 using AICollaborationPlatform.App.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -5,7 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 namespace AICollaborationPlatform.App.ViewModels;
 
 /// <summary>
-/// Jira page: shows the current connection and opens the connection dialog.
+/// Jira page: shows the current or saved connection and lets the user connect, retry or forget it.
 /// </summary>
 public sealed partial class JiraViewModel : PageViewModel
 {
@@ -18,26 +19,51 @@ public sealed partial class JiraViewModel : PageViewModel
         _dialogs = dialogs;
         _session.Changed += (_, _) =>
         {
-            OnPropertyChanged(nameof(IsConnected));
-            OnPropertyChanged(nameof(ConnectionStatus));
-            OnPropertyChanged(nameof(ConnectedUrl));
+            OnPropertyChanged(string.Empty); // every property here derives from the session
             DisconnectCommand.NotifyCanExecuteChanged();
+            RetryCommand.NotifyCanExecuteChanged();
         };
     }
 
     public override string Title => "Jira";
 
-    public bool IsConnected => _session.IsConnected;
+    public JiraSessionState State => _session.State;
 
-    public string ConnectionStatus => _session.IsConnected
-        ? $"Connected as {_session.User!.DisplayName}"
-        : "Not connected";
+    public bool IsDisconnected => State == JiraSessionState.Disconnected;
+
+    public bool IsRestoring => State == JiraSessionState.Restoring;
+
+    public bool IsConnected => State == JiraSessionState.Connected;
+
+    public bool NeedsAttention => State == JiraSessionState.NeedsAttention;
+
+    public bool HasSavedConnection => !IsDisconnected;
+
+    public string ConnectionStatus => State switch
+    {
+        JiraSessionState.Connected => $"Connected as {_session.User!.DisplayName}",
+        JiraSessionState.Restoring => "Reconnecting…",
+        JiraSessionState.NeedsAttention => "Saved connection needs attention",
+        _ => "Not connected",
+    };
+
+    public string? StatusMessage => _session.StatusMessage;
 
     public string? ConnectedUrl => _session.Settings?.BaseUrl.AbsoluteUri.TrimEnd('/');
 
     [RelayCommand]
     private void Connect() => _dialogs.ShowJiraConnectionDialog();
 
-    [RelayCommand(CanExecute = nameof(IsConnected))]
-    private void Disconnect() => _session.Disconnect();
+    [RelayCommand(CanExecute = nameof(NeedsAttention))]
+    private Task RetryAsync() => _session.RestoreAsync();
+
+    [RelayCommand(CanExecute = nameof(HasSavedConnection))]
+    private void Disconnect()
+    {
+        if (_dialogs.Confirm("Disconnect from Jira",
+                $"Disconnect from {ConnectedUrl}?\n\nThe saved token will be removed from this PC. You'll need it again to reconnect."))
+        {
+            _session.Disconnect();
+        }
+    }
 }

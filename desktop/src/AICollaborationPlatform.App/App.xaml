@@ -21,6 +21,8 @@
         <SolidColorBrush x:Key="SuccessBackgroundBrush" Color="#E8F5EC" />
         <SolidColorBrush x:Key="ErrorBrush" Color="#C5221F" />
         <SolidColorBrush x:Key="ErrorBackgroundBrush" Color="#FCE8E6" />
+        <SolidColorBrush x:Key="WarningBrush" Color="#B06000" />
+        <SolidColorBrush x:Key="WarningBackgroundBrush" Color="#FEF3E0" />
         <SolidColorBrush x:Key="InfoBackgroundBrush" Color="#EEF1FF" />
         <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
 

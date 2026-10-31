@@ -1,5 +1,6 @@
 using AICollaborationPlatform.App.Models;
 using AICollaborationPlatform.App.Services;
+using AICollaborationPlatform.App.Storage;
 using AICollaborationPlatform.App.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -69,6 +70,32 @@ public class NavigationTests
         sut.Main.OpenJiraCommand.Execute(null);
 
         Assert.Equal(0, sut.Dialogs.JiraDialogShownCount);
+    }
+
+    [Fact]
+    public async Task Jira_button_skips_dialog_when_saved_connection_needs_attention()
+    {
+        // A saved connection without a token in Credential Manager needs attention.
+        var settings = new InMemorySettingsStore
+        {
+            Settings = new AppSettings { Jira = new SavedJiraConnection("https://acme.atlassian.net", JiraAuthType.Cloud, "a@b.com") },
+        };
+        var session = TestSession.Create(settingsStore: settings);
+        await session.RestoreAsync();
+        var dialogs = new FakeDialogService();
+        var services = new ServiceCollection()
+            .AddSingleton<IJiraSession>(session)
+            .AddSingleton<IDialogService>(dialogs)
+            .AddSingleton<HomeViewModel>()
+            .AddSingleton<JiraViewModel>()
+            .BuildServiceProvider();
+        var main = new MainViewModel(new NavigationService(services, NullLogger<NavigationService>.Instance), session, dialogs);
+
+        main.OpenJiraCommand.Execute(null);
+
+        Assert.Equal(JiraSessionState.NeedsAttention, session.State);
+        Assert.IsType<JiraViewModel>(main.CurrentPage);
+        Assert.Equal(0, dialogs.JiraDialogShownCount);
     }
 
     [Fact]

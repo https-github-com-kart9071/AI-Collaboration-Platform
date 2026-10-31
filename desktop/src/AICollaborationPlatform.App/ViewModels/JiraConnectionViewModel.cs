@@ -29,7 +29,7 @@ public sealed partial class JiraConnectionViewModel : ObservableObject
         _connectionService = connectionService;
         _session = session;
 
-        // Reopening the dialog while connected starts from the current connection.
+        // Start from the current or saved connection, e.g. to fix an expired token.
         if (session.Settings is { } current)
         {
             Url = current.BaseUrl.AbsoluteUri.TrimEnd('/');
@@ -149,11 +149,24 @@ public sealed partial class JiraConnectionViewModel : ObservableObject
     private async Task ConnectAsync()
     {
         var (settings, result) = await RunTestAsync();
-        if (settings is not null && result is { IsSuccess: true })
+        if (settings is null || result is not { IsSuccess: true })
+        {
+            return;
+        }
+
+        try
         {
             _session.Connect(settings, result.User!);
-            RequestClose?.Invoke(this, true);
         }
+        catch (Exception ex)
+        {
+            SetStatus(ConnectionStatusKind.Error,
+                "The connection works, but it couldn't be saved on this PC. Try again, or check Windows Credential Manager.",
+                ex.Message);
+            return;
+        }
+
+        RequestClose?.Invoke(this, true);
     }
 
     /// <summary>Cancels a running test first; a second click closes the dialog.</summary>

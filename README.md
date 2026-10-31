@@ -69,11 +69,20 @@ desktop/
 
 Logs are written to `%APPDATA%\AICollaborationPlatform\logs\`, one file per day (`app20261030.log`), and kept for 14 days.
 
+### Where your data is stored
+
+| What | Where |
+|---|---|
+| Jira URL, Cloud/Server choice, email | `%APPDATA%\AICollaborationPlatform\settings.json` (plain JSON, no secrets) |
+| Jira API token / Personal Access Token | **Windows Credential Manager**, entry `AICollaborationPlatform/Jira`, encrypted by Windows for your user account |
+
+To see or delete the token yourself, open **Control Panel → Credential Manager → Windows Credentials**. **Disconnect** in the app removes both.
+
 ## Roadmap
 
 1. ✅ Project setup and app shell
 2. ✅ Jira connection dialog (URL, auth type, token, Test Connection)
-3. Store credentials securely (Windows Credential Manager)
+3. ✅ Store credentials securely (Windows Credential Manager)
 4. Jira API client service
 5. Fetch all Jira data into SQLite
 6. Browse the fetched data in the UI

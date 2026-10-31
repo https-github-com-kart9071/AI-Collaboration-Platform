@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http;
 using AICollaborationPlatform.App.Models;
 using AICollaborationPlatform.App.Services;
+using AICollaborationPlatform.App.Storage;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AICollaborationPlatform.Tests;
@@ -10,10 +11,60 @@ internal sealed class FakeDialogService : IDialogService
 {
     public int JiraDialogShownCount { get; private set; }
 
+    public bool ConfirmAnswer { get; set; } = true;
+
+    public int ConfirmCount { get; private set; }
+
     public bool ShowJiraConnectionDialog()
     {
         JiraDialogShownCount++;
         return false;
+    }
+
+    public bool Confirm(string title, string message)
+    {
+        ConfirmCount++;
+        return ConfirmAnswer;
+    }
+}
+
+internal sealed class InMemoryCredentialStore : ICredentialStore
+{
+    public Dictionary<string, (string UserName, string Secret)> Entries { get; } = [];
+
+    public Exception? FailWith { get; set; }
+
+    public string? Read(string target)
+    {
+        if (FailWith is not null) throw FailWith;
+        return Entries.TryGetValue(target, out var entry) ? entry.Secret : null;
+    }
+
+    public void Write(string target, string userName, string secret)
+    {
+        if (FailWith is not null) throw FailWith;
+        Entries[target] = (userName, secret);
+    }
+
+    public bool Delete(string target)
+    {
+        if (FailWith is not null) throw FailWith;
+        return Entries.Remove(target);
+    }
+}
+
+internal sealed class InMemorySettingsStore : ISettingsStore
+{
+    public AppSettings Settings { get; set; } = new();
+
+    public int SaveCount { get; private set; }
+
+    public AppSettings Load() => Settings;
+
+    public void Save(AppSettings settings)
+    {
+        Settings = settings;
+        SaveCount++;
     }
 }
 
@@ -57,5 +108,12 @@ internal sealed class FakeJiraConnectionService(Func<JiraConnectionSettings, Can
 
 internal static class TestSession
 {
-    public static JiraSession Create() => new(NullLogger<JiraSession>.Instance);
+    public static JiraSession Create(
+        IJiraConnectionService? connectionService = null,
+        ISettingsStore? settingsStore = null,
+        ICredentialStore? credentialStore = null) =>
+        new(connectionService ?? FakeJiraConnectionService.Returning(JiraConnectionResult.Success(new JiraUser("Test User", null))),
+            settingsStore ?? new InMemorySettingsStore(),
+            credentialStore ?? new InMemoryCredentialStore(),
+            NullLogger<JiraSession>.Instance);
 }

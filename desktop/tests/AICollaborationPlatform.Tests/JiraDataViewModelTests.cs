@@ -30,6 +30,28 @@ internal sealed class FakeBrowser : IBrowserLauncher
     public void Open(Uri url) => Opened.Add(url);
 }
 
+/// <summary>Just enough of a Jira connection for the data page: connected or not.</summary>
+internal sealed class FakeSession : IJiraSession
+{
+    public bool IsConnected { get; set; }
+
+    public JiraSessionState State => IsConnected ? JiraSessionState.Connected : JiraSessionState.Disconnected;
+
+    public JiraConnectionSettings? Settings => null;
+
+    public JiraUser? User => null;
+
+    public string? StatusMessage => null;
+
+    public event EventHandler? Changed { add { } remove { } }
+
+    public void Connect(JiraConnectionSettings settings, JiraUser user) => IsConnected = true;
+
+    public void Disconnect() => IsConnected = false;
+
+    public Task RestoreAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+}
+
 internal sealed class FakeNavigation : INavigationService
 {
     public List<Type> NavigatedTo { get; } = [];
@@ -72,8 +94,110 @@ public class JiraDataViewModelTests
         };
         var browser = new FakeBrowser();
         var navigation = new FakeNavigation();
-        var vm = new JiraDataViewModel(queries, browser, navigation, NullLogger<JiraDataViewModel>.Instance) { SearchDelay = TimeSpan.Zero };
+        var vm = new JiraDataViewModel(queries, new FakeSyncService(), new FakeSession(), browser, navigation, new FakeIssueEditor(), new FakeDialogService(), NullLogger<JiraDataViewModel>.Instance)
+            { SearchDelay = TimeSpan.Zero };
         return (vm, queries, browser, navigation);
+    }
+
+    private static (JiraDataViewModel Vm, FakeDataQueries Queries, FakeSyncService Sync) CreateConnected()
+    {
+        var (_, queries, browser, navigation) = Create();
+        var sync = new FakeSyncService();
+        var vm = new JiraDataViewModel(queries, sync, new FakeSession { IsConnected = true }, browser, navigation, new FakeIssueEditor(), new FakeDialogService(), NullLogger<JiraDataViewModel>.Instance)
+            { SearchDelay = TimeSpan.Zero };
+        return (vm, queries, sync);
+    }
+
+    private static JiraSyncResult SyncResult(JiraSyncStatus status = JiraSyncStatus.Completed, int issues = 0, int removed = 0, string? error = null) =>
+        new(status, 2, issues, 0, 0, 0, removed, TimeSpan.FromSeconds(1), error, []);
+
+    [Fact]
+    public async Task Refresh_fetches_changes_for_the_shown_projects_then_reloads()
+    {
+        var (vm, queries, sync) = CreateConnected();
+        await vm.LoadAsync();
+        var loadsBefore = queries.LoadCount;
+        sync.OnSync = (_, progress, _) =>
+        {
+            Assert.True(vm.IsRefreshing);
+            Assert.False(vm.RefreshCommand.CanExecute(null)); // no second refresh while one runs
+            return Task.FromResult(SyncResult(issues: 3, removed: 1));
+        };
+
+        await vm.RefreshCommand.ExecuteAsync(null);
+
+        var options = Assert.Single(sync.Runs);
+        Assert.Equal(["KAN", "OPS"], options.ProjectKeys);
+        Assert.False(options.FullRefresh); // only what changed since the last fetch
+        Assert.Equal(loadsBefore + 1, queries.LoadCount);
+        Assert.False(vm.IsRefreshing);
+        Assert.Equal(FetchResultKind.Success, vm.RefreshKind);
+        Assert.StartsWith("3 issues updated, 1 removed · ", vm.RefreshMessage);
+    }
+
+    [Fact]
+    public async Task Refresh_with_no_changes_says_up_to_date()
+    {
+        var (vm, _, _) = CreateConnected();
+        await vm.LoadAsync();
+
+        await vm.RefreshCommand.ExecuteAsync(null);
+
+        Assert.StartsWith("Up to date · checked at ", vm.RefreshMessage);
+    }
+
+    [Fact]
+    public async Task Refresh_when_disconnected_rereads_the_saved_data_only()
+    {
+        var (vm, queries, _, _) = Create();
+        await vm.LoadAsync();
+        var loadsBefore = queries.LoadCount;
+
+        await vm.RefreshCommand.ExecuteAsync(null);
+
+        Assert.Equal(loadsBefore + 1, queries.LoadCount);
+        Assert.Equal(FetchResultKind.Warning, vm.RefreshKind);
+        Assert.Contains("Not connected", vm.RefreshMessage);
+    }
+
+    [Fact]
+    public async Task Refresh_failure_keeps_showing_the_saved_data()
+    {
+        var (vm, _, sync) = CreateConnected();
+        await vm.LoadAsync();
+        sync.OnSync = (_, _, _) => Task.FromResult(SyncResult(JiraSyncStatus.Failed, error: "Jira returned 401 Unauthorized."));
+
+        await vm.RefreshCommand.ExecuteAsync(null);
+
+        Assert.True(vm.HasData);
+        Assert.Equal(4, vm.Issues.Count);
+        Assert.Equal(FetchResultKind.Error, vm.RefreshKind);
+        Assert.Equal("Couldn't refresh from Jira: Jira returned 401 Unauthorized. Showing the saved data.", vm.RefreshMessage);
+    }
+
+    [Fact]
+    public async Task Refresh_can_be_cancelled()
+    {
+        var (vm, _, sync) = CreateConnected();
+        await vm.LoadAsync();
+        var started = new TaskCompletionSource();
+        sync.OnSync = async (_, _, token) =>
+        {
+            started.SetResult();
+            try { await Task.Delay(Timeout.Infinite, token); }
+            catch (OperationCanceledException) { }
+            return SyncResult(JiraSyncStatus.Cancelled);
+        };
+
+        var refresh = vm.RefreshCommand.ExecuteAsync(null);
+        await started.Task;
+        Assert.True(vm.CancelRefreshCommand.CanExecute(null));
+        vm.CancelRefreshCommand.Execute(null);
+        await refresh;
+
+        Assert.False(vm.IsRefreshing);
+        Assert.Contains("cancelled", vm.RefreshMessage);
+        Assert.False(vm.CancelRefreshCommand.CanExecute(null));
     }
 
     private static async Task<JiraDataViewModel> Loaded(params IssueRow[] rows)
@@ -267,6 +391,33 @@ public class JiraDataViewModelTests
         vm.CloseDetailCommand.Execute(null);
         Assert.False(vm.IsDetailOpen);
         Assert.Null(vm.Detail);
+    }
+
+    [Fact]
+    public async Task Closing_or_switching_issues_with_unsaved_changes_asks_first()
+    {
+        var (_, queries, browser, navigation) = Create();
+        queries.Details["id-KAN-1"] = Detail("id-KAN-1", "KAN-1");
+        queries.Details["id-KAN-2"] = Detail("id-KAN-2", "KAN-2");
+        var dialogs = new FakeDialogService { ConfirmAnswer = false };
+        var vm = new JiraDataViewModel(queries, new FakeSyncService(), new FakeSession { IsConnected = true }, browser, navigation,
+            new FakeIssueEditor(), dialogs, NullLogger<JiraDataViewModel>.Instance) { SearchDelay = TimeSpan.Zero };
+        await vm.LoadAsync();
+        await vm.OpenIssueCommand.ExecuteAsync(vm.Issues.Single(i => i.Key == "KAN-1"));
+        vm.Editor.CommentDraft = "Half-written comment";
+
+        vm.CloseDetailCommand.Execute(null);
+        await vm.OpenIssueCommand.ExecuteAsync(vm.Issues.Single(i => i.Key == "KAN-2"));
+        await vm.LoadAsync(); // a reload of the same issue doesn't ask
+
+        Assert.Equal(2, dialogs.ConfirmCount);
+        Assert.Equal("KAN-1", vm.Detail!.Key); // "keep editing" kept the panel as it was
+        Assert.Equal("Half-written comment", vm.Editor.CommentDraft);
+
+        dialogs.ConfirmAnswer = true;
+        vm.CloseDetailCommand.Execute(null);
+        Assert.False(vm.IsDetailOpen);
+        Assert.Equal("", vm.Editor.CommentDraft);
     }
 
     [Fact]

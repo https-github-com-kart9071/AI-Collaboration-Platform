@@ -23,21 +23,37 @@ public sealed partial class JiraDataViewModel : PageViewModel
     public const string UnassignedLabel = "Unassigned";
 
     private readonly IJiraDataQueries _queries;
+    private readonly IJiraSyncService _sync;
+    private readonly IJiraSession _session;
     private readonly IBrowserLauncher _browser;
     private readonly INavigationService _navigation;
+    private readonly IDialogService _dialogs;
     private readonly ILogger<JiraDataViewModel> _logger;
 
     private JiraDataSnapshot _snapshot = JiraDataSnapshot.Empty;
     private CancellationTokenSource? _searchDebounce;
     private int _loadVersion;
     private bool _suppressFilters;
+    private CancellationTokenSource? _refreshCts;
 
-    public JiraDataViewModel(IJiraDataQueries queries, IBrowserLauncher browser, INavigationService navigation, ILogger<JiraDataViewModel> logger)
+    public JiraDataViewModel(
+        IJiraDataQueries queries,
+        IJiraSyncService sync,
+        IJiraSession session,
+        IBrowserLauncher browser,
+        INavigationService navigation,
+        IJiraIssueEditor editor,
+        IDialogService dialogs,
+        ILogger<JiraDataViewModel> logger)
     {
         _queries = queries;
+        _sync = sync;
+        _session = session;
         _browser = browser;
         _navigation = navigation;
+        _dialogs = dialogs;
         _logger = logger;
+        Editor = new IssueEditorViewModel(editor, () => Site, LoadAsync, logger);
     }
 
     public override string Title => "Jira data";
@@ -119,10 +135,118 @@ public sealed partial class JiraDataViewModel : PageViewModel
     [ObservableProperty]
     private IssueRow? _selectedIssue;
 
+    /// <summary>Changes to the open issue: edits, status, assignee, comments.</summary>
+    public IssueEditorViewModel Editor { get; }
+
+    partial void OnDetailChanged(IssueDetail? value) => Editor.Load(value);
+
+    // ---- Refresh from Jira ----
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RefreshCommand), nameof(CancelRefreshCommand))]
+    private bool _isRefreshing;
+
+    [ObservableProperty]
+    private string _refreshMessage = "";
+
+    [ObservableProperty]
+    private FetchResultKind _refreshKind;
+
     public override Task OnNavigatedToAsync() => LoadAsync();
 
-    [RelayCommand]
-    private Task RefreshAsync() => LoadAsync();
+    /// <summary>
+    /// Asks Jira for what changed since the last fetch in the projects shown here (an incremental fetch,
+    /// so usually a few seconds), saves it, then reloads the page. Offline it just re-reads the saved data.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanRefresh))]
+    private async Task RefreshAsync()
+    {
+        if (!_session.IsConnected)
+        {
+            await LoadAsync();
+            ShowRefresh(FetchResultKind.Warning, "Not connected to Jira, so this is the saved data. Connect on the Jira page to get the latest.");
+            return;
+        }
+
+        var projectKeys = _snapshot.Projects.Select(p => p.Key).ToList();
+        if (projectKeys.Count == 0)
+        {
+            await LoadAsync();
+            ShowRefresh(FetchResultKind.Warning, "Nothing fetched yet. Use Fetch data on the Jira page first.");
+            return;
+        }
+
+        IsRefreshing = true;
+        ShowRefresh(FetchResultKind.None, "Checking Jira for changes…");
+        _refreshCts = new CancellationTokenSource();
+        var progress = new Progress<JiraSyncProgress>(p =>
+        {
+            if (IsRefreshing && p is { Phase: JiraSyncPhase.Issues, ProjectKey: { } key })
+            {
+                RefreshMessage = p.IssuesTotal is { } total
+                    ? $"Updating {key} ({p.ProjectIndex} of {p.ProjectCount})… {p.IssuesDone:N0} of {total:N0} changed issues"
+                    : $"Updating {key} ({p.ProjectIndex} of {p.ProjectCount})…";
+            }
+        });
+
+        try
+        {
+            var token = _refreshCts.Token;
+            var result = await Task.Run(() => _sync.SyncAsync(new JiraSyncOptions(projectKeys), progress, token));
+            IsRefreshing = false;   // before reloading, so late progress reports don't overwrite the result
+            await LoadAsync();
+            ShowRefreshResult(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Refresh from Jira failed unexpectedly");
+            IsRefreshing = false;
+            await LoadAsync();
+            ShowRefresh(FetchResultKind.Error, $"Couldn't refresh from Jira: {ex.Message}");
+        }
+        finally
+        {
+            IsRefreshing = false;
+            _refreshCts.Dispose();
+            _refreshCts = null;
+        }
+    }
+
+    private bool CanRefresh() => !IsRefreshing;
+
+    [RelayCommand(CanExecute = nameof(IsRefreshing))]
+    private void CancelRefresh()
+    {
+        _refreshCts?.Cancel();
+        RefreshMessage = "Cancelling…";
+    }
+
+    private void ShowRefreshResult(JiraSyncResult result)
+    {
+        var at = DateTime.Now.ToString("t", System.Globalization.CultureInfo.CurrentCulture);
+        switch (result.Status)
+        {
+            case JiraSyncStatus.Completed:
+                var changes = new List<string>();
+                if (result.Issues > 0) changes.Add(result.Issues == 1 ? "1 issue updated" : $"{result.Issues:N0} issues updated");
+                if (result.IssuesRemoved > 0) changes.Add($"{result.IssuesRemoved:N0} removed");
+                ShowRefresh(result.Warnings.Count > 0 ? FetchResultKind.Warning : FetchResultKind.Success,
+                    changes.Count == 0 ? $"Up to date · checked at {at}" : $"{string.Join(", ", changes)} · {at}");
+                break;
+            case JiraSyncStatus.Cancelled:
+                ShowRefresh(FetchResultKind.Warning, "Refresh cancelled. Anything already downloaded was kept.");
+                break;
+            default:
+                ShowRefresh(FetchResultKind.Error, $"Couldn't refresh from Jira: {result.Error?.TrimEnd('.')}. Showing the saved data.");
+                break;
+        }
+    }
+
+    private void ShowRefresh(FetchResultKind kind, string message)
+    {
+        RefreshKind = kind;
+        RefreshMessage = message;
+    }
 
     /// <summary>Reloads everything from the database, keeping the current filters where they still apply.</summary>
     public async Task LoadAsync()
@@ -149,7 +273,7 @@ public sealed partial class JiraDataViewModel : PageViewModel
             if (IsDetailOpen && Detail is { } open)
             {
                 var row = snapshot.Issues.FirstOrDefault(i => i.Id == open.Id);
-                if (row is null) CloseDetail(); else await OpenIssueAsync(row);
+                if (row is null) CloseDetailWithoutAsking(); else await OpenIssueAsync(row);
             }
         }
         catch (Exception ex)
@@ -249,6 +373,8 @@ public sealed partial class JiraDataViewModel : PageViewModel
         if (row is null) return;
 
         var reopeningSame = IsDetailOpen && Detail?.Id == row.Id;
+        if (!reopeningSame && IsDetailOpen && !ConfirmDiscardChanges()) return;
+
         IsDetailOpen = true;
         IsDetailLoading = true;
         try
@@ -270,9 +396,19 @@ public sealed partial class JiraDataViewModel : PageViewModel
     [RelayCommand]
     private void CloseDetail()
     {
+        if (ConfirmDiscardChanges()) CloseDetailWithoutAsking();
+    }
+
+    private void CloseDetailWithoutAsking()
+    {
         IsDetailOpen = false;
         Detail = null;
     }
+
+    /// <summary>True if there's nothing unsaved in the issue panel, or the user agrees to lose it.</summary>
+    private bool ConfirmDiscardChanges() =>
+        !Editor.HasUnsavedChanges ||
+        _dialogs.Confirm("Discard changes?", $"Your changes to {Detail?.Key} haven't been saved to Jira. Discard them?");
 
     private bool CanOpenInJira(string? issueKey) => !string.IsNullOrEmpty(Site) && !string.IsNullOrEmpty(issueKey ?? Detail?.Key);
 

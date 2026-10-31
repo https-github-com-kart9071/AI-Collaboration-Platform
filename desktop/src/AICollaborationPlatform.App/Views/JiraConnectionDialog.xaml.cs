@@ -14,6 +14,7 @@ public partial class JiraConnectionDialog : Window
     public JiraConnectionDialog(JiraConnectionViewModel viewModel)
     {
         InitializeComponent();
+        DarkTitleBar.Apply(this);
         _viewModel = viewModel;
         DataContext = viewModel;
 

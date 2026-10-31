@@ -310,7 +310,7 @@ public sealed class JiraDatabase : IDisposable
             issueId, reader.GetString(0), reader.GetString(1), Text(reader, 2), Text(reader, 3), Text(reader, 4),
             Text(reader, 5), Text(reader, 6), Text(reader, 7), LocalDate(reader, 8), LocalDate(reader, 9), LocalDate(reader, 10),
             labels, Text(reader, 12), Text(reader, 13),
-            Read("SELECT author_name, created, body FROM comments WHERE issue_id = $id ORDER BY created",
+            Read("SELECT author_name, created, body FROM comments WHERE issue_id = $id ORDER BY created DESC, rowid DESC",
                 r => new CommentRow(Text(r, 0), LocalDate(r, 1), r.GetString(2)), issueId),
             Read("SELECT created, author_name, field, from_value, to_value FROM changelog WHERE issue_id = $id ORDER BY created DESC, id",
                 r => new ChangeRow(LocalDate(r, 0), Text(r, 1), r.GetString(2), Text(r, 3), Text(r, 4)), issueId),

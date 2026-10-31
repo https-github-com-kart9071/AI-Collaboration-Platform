@@ -245,6 +245,32 @@ public class JiraClientTests
         Assert.Throws<ArgumentException>(() => client.SearchIssuesAsync("  "));
     }
 
+    [Fact]
+    public async Task Issue_ids_on_cloud_come_in_big_token_pages_with_only_the_id_field()
+    {
+        var stub = new JiraApiStub()
+            .On("/rest/api/3/search/jql", """{"issues":[{"id":"1"},{"id":"2"}],"nextPageToken":"t2","isLast":false}""")
+            .On("/rest/api/3/search/jql", """{"issues":[{"id":"3"}],"isLast":true}""", queryContains: "nextPageToken=t2");
+
+        var ids = await CreateClient(stub, Cloud).GetIssueIdsAsync("project = ABC").CollectAsync();
+
+        Assert.Equal(["1", "2", "3"], ids);
+        Assert.Contains("fields=id", stub.RequestedPathsAndQueries.First());
+        Assert.Contains("maxResults=5000", stub.RequestedPathsAndQueries.First());
+    }
+
+    [Fact]
+    public async Task Issue_ids_on_server_page_with_start_at()
+    {
+        var stub = new JiraApiStub()
+            .On("/jira/rest/api/2/search", """{"startAt":0,"total":3,"issues":[{"id":"1"},{"id":"2"}]}""", queryContains: "startAt=0")
+            .On("/jira/rest/api/2/search", """{"startAt":2,"total":3,"issues":[{"id":"3"}]}""", queryContains: "startAt=2");
+
+        var ids = await CreateClient(stub, Server).GetIssueIdsAsync("project = ABC").CollectAsync();
+
+        Assert.Equal(["1", "2", "3"], ids); // Server returned fewer than asked for; paging carried on after what came back
+    }
+
     // ---- Single issue, comments, worklogs ----
 
     [Fact]
@@ -476,5 +502,156 @@ public class JiraClientTests
 
         Assert.Single(fields);
         Assert.Equal([TimeSpan.FromSeconds(3)], delays);
+    }
+    // ---- Changes ----
+
+    private static HttpResponseMessage NoContent() => new(HttpStatusCode.NoContent);
+
+    private static System.Text.Json.JsonElement Body(JiraApiStub stub, int index = 0) =>
+        System.Text.Json.JsonDocument.Parse(stub.Bodies[index]!).RootElement;
+
+    [Fact]
+    public async Task Cloud_comment_is_sent_as_a_rich_text_document()
+    {
+        var stub = new JiraApiStub().On("/rest/api/3/issue/ABC-1/comment", """
+            {"id":"500","author":{"accountId":"a1","displayName":"Alex"},"body":{"type":"doc","version":1,"content":[]},"created":"2026-10-31T09:00:00.000+0000"}
+            """, status: HttpStatusCode.Created);
+
+        var comment = await CreateClient(stub, Cloud).AddCommentAsync("ABC-1", "First line\r\nsecond line\n\nNew paragraph");
+
+        Assert.Equal("500", comment.Id);
+        Assert.Equal(HttpMethod.Post, stub.Requests.Single().Method);
+        Assert.Equal("""
+            {"type":"doc","version":1,"content":[{"type":"paragraph","content":[{"type":"text","text":"First line"},{"type":"hardBreak"},{"type":"text","text":"second line"}]},{"type":"paragraph","content":[{"type":"text","text":"New paragraph"}]}]}
+            """, Body(stub).GetProperty("body").GetRawText());
+    }
+
+    [Fact]
+    public async Task Server_comment_is_sent_as_plain_text()
+    {
+        var stub = new JiraApiStub().On("/jira/rest/api/2/issue/ABC-1/comment", """{"id":"7","body":"Hi\nthere"}""", status: HttpStatusCode.Created);
+
+        await CreateClient(stub, Server).AddCommentAsync("ABC-1", "Hi\r\nthere");
+
+        Assert.Equal("Hi\nthere", Body(stub).GetProperty("body").GetString());
+    }
+
+    [Fact]
+    public async Task Transitions_list_the_target_status_and_moving_posts_the_transition_id()
+    {
+        var stub = new JiraApiStub()
+            .On("/rest/api/3/issue/ABC-1/transitions", """
+                {"transitions":[{"id":"21","name":"Start progress","to":{"name":"In Progress","statusCategory":{"key":"indeterminate"}}},
+                                {"id":"31","name":"Done","to":{"name":"Done","statusCategory":{"key":"done"}}}]}
+                """);
+        var client = CreateClient(stub, Cloud);
+
+        var transitions = await client.GetTransitionsAsync("ABC-1");
+        stub.On("/rest/api/3/issue/ABC-1/transitions", NoContent);
+        await client.TransitionIssueAsync("ABC-1", "21");
+
+        Assert.Equal(new JiraTransition("21", "Start progress", "In Progress", "indeterminate"), transitions[0]);
+        Assert.Equal(2, transitions.Count);
+        Assert.Equal(HttpMethod.Post, stub.Requests[1].Method);
+        Assert.Equal("""{"transition":{"id":"21"}}""", stub.Bodies[1]);
+    }
+
+    [Fact]
+    public async Task Update_sends_only_the_changed_fields()
+    {
+        var stub = new JiraApiStub().On("/rest/api/3/issue/ABC-1", NoContent);
+        var client = CreateClient(stub, Cloud);
+
+        await client.UpdateIssueAsync("ABC-1", new JiraIssueUpdate(Summary: "New title", Priority: "High"));
+        await client.UpdateIssueAsync("ABC-1", new JiraIssueUpdate(Description: ""));
+        await client.UpdateIssueAsync("ABC-1", new JiraIssueUpdate());
+
+        Assert.Equal(HttpMethod.Put, stub.Requests[0].Method);
+        Assert.Equal("""{"fields":{"summary":"New title","priority":{"name":"High"}}}""", stub.Bodies[0]);
+        Assert.Equal("""{"fields":{"description":null}}""", stub.Bodies[1]); // empty clears it
+        Assert.Equal(2, stub.Requests.Count); // nothing to change, nothing sent
+    }
+
+    [Fact]
+    public async Task Assigning_uses_the_account_id_on_cloud_and_the_username_on_server()
+    {
+        var cloud = new JiraApiStub().On("/rest/api/3/issue/ABC-1/assignee", NoContent);
+        var server = new JiraApiStub().On("/jira/rest/api/2/issue/ABC-1/assignee", NoContent);
+
+        await CreateClient(cloud, Cloud).AssignIssueAsync("ABC-1", "acc-1");
+        await CreateClient(cloud, Cloud).AssignIssueAsync("ABC-1", null);
+        await CreateClient(server, Server).AssignIssueAsync("ABC-1", "alex");
+
+        Assert.Equal(["""{"accountId":"acc-1"}""", """{"accountId":null}"""], cloud.Bodies);
+        Assert.Equal("""{"name":"alex"}""", server.Bodies.Single());
+    }
+
+    [Fact]
+    public async Task Assignable_people_on_server_carry_the_username_the_assign_call_needs()
+    {
+        var stub = new JiraApiStub().On("/jira/rest/api/2/user/assignable/search",
+            """[{"key":"JIRAUSER10100","name":"alex","displayName":"Alex Kim","active":true}]""");
+
+        var people = await CreateClient(stub, Server).GetAssignableUsersAsync("ABC-1", "al");
+
+        Assert.Equal(new JiraPerson("alex", "Alex Kim", null, true), people.Single());
+        Assert.Contains("issueKey=ABC-1&username=al&maxResults=50", stub.RequestedPathsAndQueries.Single());
+    }
+
+    [Fact]
+    public async Task Assignable_people_on_cloud_are_searched_by_query()
+    {
+        var stub = new JiraApiStub().On("/rest/api/3/user/assignable/search",
+            """[{"accountId":"acc-1","displayName":"Alex Kim","active":true}]""");
+
+        var people = await CreateClient(stub, Cloud).GetAssignableUsersAsync("ABC-1", "alex kim");
+
+        Assert.Equal("acc-1", people.Single().Id);
+        Assert.Contains("query=alex kim", stub.RequestedPathsAndQueries.Single());
+    }
+
+    [Fact]
+    public async Task Priorities_are_listed_by_name()
+    {
+        var stub = new JiraApiStub().On("/rest/api/3/priority", """[{"id":"1","name":"Highest"},{"id":"3","name":"Medium"}]""");
+
+        Assert.Equal(["Highest", "Medium"], await CreateClient(stub, Cloud).GetPrioritiesAsync());
+    }
+
+    [Fact]
+    public async Task Refused_change_says_the_account_cant_make_it_and_keeps_jiras_reasons()
+    {
+        var stub = new JiraApiStub()
+            .On("/rest/api/3/issue/ABC-1/assignee", """{"errorMessages":["You do not have permission to assign issues."]}""", status: HttpStatusCode.Forbidden)
+            .On("/rest/api/3/issue/ABC-1", """{"errorMessages":[],"errors":{"summary":"Summary must be less than 255 characters."}}""", status: HttpStatusCode.BadRequest);
+        var client = CreateClient(stub, Cloud);
+
+        var forbidden = await Assert.ThrowsAsync<JiraApiException>(() => client.AssignIssueAsync("ABC-1", "acc-1"));
+        var invalid = await Assert.ThrowsAsync<JiraApiException>(() => client.UpdateIssueAsync("ABC-1", new JiraIssueUpdate(Summary: "x")));
+
+        Assert.Equal("This account isn't allowed to make that change in Jira: You do not have permission to assign issues.", forbidden.Message);
+        Assert.Equal(["summary: Summary must be less than 255 characters."], invalid.JiraErrors);
+    }
+
+    [Fact]
+    public async Task Changes_are_never_retried_so_a_comment_cant_be_posted_twice()
+    {
+        var stub = new JiraApiStub().On("/rest/api/3/issue/ABC-1/comment", () => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+        var retry = new JiraRetryHandler(NullLogger<JiraRetryHandler>.Instance) { InnerHandler = stub, Delay = (_, _) => Task.CompletedTask };
+
+        await Assert.ThrowsAsync<JiraApiException>(() =>
+            new JiraClient(new HttpClient(retry), Cloud, NullLogger<JiraClient>.Instance).AddCommentAsync("ABC-1", "Hi"));
+
+        Assert.Single(stub.Requests);
+    }
+
+    [Fact]
+    public async Task Get_issue_includes_its_history()
+    {
+        var stub = new JiraApiStub().On("/rest/api/3/issue/ABC-1", CloudIssue);
+
+        await CreateClient(stub, Cloud).GetIssueAsync("ABC-1");
+
+        Assert.Contains("expand=changelog", stub.RequestedPathsAndQueries.Single());
     }
 }

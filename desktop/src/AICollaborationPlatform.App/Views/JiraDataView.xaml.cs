@@ -79,8 +79,12 @@ public partial class JiraDataView : UserControl
         if (e.Key == Key.Escape && _viewModel?.IsDetailOpen == true)
         {
             e.Handled = true;
+
+            // Esc backs out one step: first out of an open edit, then out of the panel.
+            if (_viewModel.Editor.CancelActiveEdit()) return;
+
             _viewModel.CloseDetailCommand.Execute(null);
-            IssuesGrid.Focus();
+            if (!_viewModel.IsDetailOpen) IssuesGrid.Focus();
         }
         else if (e.Key == Key.F && Keyboard.Modifiers == ModifierKeys.Control)
         {
@@ -90,13 +94,17 @@ public partial class JiraDataView : UserControl
         }
     }
 
-    // The read-only text boxes in the issue panel swallow the mouse wheel even when they have nothing to scroll,
-    // so the panel scrolls itself before they see the event.
-    private void OnDetailMouseWheel(object sender, MouseWheelEventArgs e)
+    // An inline editor (summary, description) gets the keyboard as soon as it opens, with the cursor at the end.
+    private void OnEditorShown(object sender, DependencyPropertyChangedEventArgs e)
     {
-        var scroller = (ScrollViewer)sender;
-        scroller.ScrollToVerticalOffset(scroller.VerticalOffset - e.Delta / 3.0);
-        e.Handled = true;
+        if (e.NewValue is true && sender is TextBox box)
+        {
+            Dispatcher.BeginInvoke(() =>
+            {
+                box.Focus();
+                box.CaretIndex = box.Text.Length;
+            }, System.Windows.Threading.DispatcherPriority.Input);
+        }
     }
 
     private static T? FindAncestor<T>(DependencyObject? element) where T : DependencyObject

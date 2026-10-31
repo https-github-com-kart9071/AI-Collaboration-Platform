@@ -192,7 +192,7 @@
                                   Visibility="{Binding StatusDetails, Converter={StaticResource StringToVisibility}}">
                             <TextBox Text="{Binding StatusDetails, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap"
                                      BorderThickness="0" Background="Transparent" FontFamily="Consolas" FontSize="11"
-                                     Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0" />
+                                     Foreground="{StaticResource TextSecondaryBrush}" CaretBrush="{StaticResource TextPrimaryBrush}" Margin="0,4,0,0" />
                         </Expander>
                     </StackPanel>
                 </Grid>

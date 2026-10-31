@@ -40,6 +40,20 @@ public sealed class JiraClient(HttpClient http, JiraConnectionSettings settings,
             : GetOffsetPagedAsync($"{Api}/search?{query}", "issues", MapIssue, cancellationToken);
     }
 
+    public IAsyncEnumerable<string> GetIssueIdsAsync(string jql, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(jql);
+        var query = $"jql={Uri.EscapeDataString(jql)}&fields=id";
+        static string MapId(JsonElement issue) => JiraJson.GetString(issue, "id") ?? "";
+
+        // Big pages: Cloud allows 5,000 when only IDs are requested; Server caps at its own maximum (usually 1,000).
+        return IsCloud
+            ? GetTokenPagedAsync($"{Api}/search/jql?{query}", "issues", MapId, cancellationToken, IdPageSize)
+            : GetOffsetPagedAsync($"{Api}/search?{query}", "issues", MapId, cancellationToken, IdPageSize);
+    }
+
+    private const int IdPageSize = 5000;
+
     public async Task<long> CountIssuesAsync(string jql, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(jql);
@@ -59,7 +73,7 @@ public sealed class JiraClient(HttpClient http, JiraConnectionSettings settings,
 
     public async Task<JiraIssue> GetIssueAsync(string issueKey, CancellationToken cancellationToken = default)
     {
-        using var json = await GetJsonAsync($"{Api}/issue/{Uri.EscapeDataString(issueKey)}?fields=*all", cancellationToken);
+        using var json = await GetJsonAsync($"{IssuePath(issueKey)}?fields=*all&expand=changelog", cancellationToken);
         return MapIssue(json.RootElement);
     }
 
@@ -113,6 +127,85 @@ public sealed class JiraClient(HttpClient http, JiraConnectionSettings settings,
         return fields;
     }
 
+    // ---- Changes ----
+
+    public async Task<JiraComment> AddCommentAsync(string issueKey, string body, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(body);
+        using var request = JiraAuth.CreateRequest(settings, HttpMethod.Post, $"{IssuePath(issueKey)}/comment");
+        request.Content = JsonContent.Create(new { body = RichText(body) });
+        using var json = await SendForJsonAsync(request, cancellationToken);
+        return MapComment(json.RootElement);
+    }
+
+    public async Task<IReadOnlyList<JiraTransition>> GetTransitionsAsync(string issueKey, CancellationToken cancellationToken = default)
+    {
+        using var json = await GetJsonAsync($"{IssuePath(issueKey)}/transitions", cancellationToken);
+        return MapArray(json.RootElement, MapTransition, "transitions");
+    }
+
+    public Task TransitionIssueAsync(string issueKey, string transitionId, CancellationToken cancellationToken = default) =>
+        SendAsync(HttpMethod.Post, $"{IssuePath(issueKey)}/transitions", new { transition = new { id = transitionId } }, cancellationToken);
+
+    public Task UpdateIssueAsync(string issueKey, JiraIssueUpdate update, CancellationToken cancellationToken = default)
+    {
+        var fields = new Dictionary<string, object?>();
+        if (update.Summary is { } summary) fields["summary"] = summary;
+        if (update.Description is { } description) fields["description"] = string.IsNullOrWhiteSpace(description) ? null : RichText(description);
+        if (update.Priority is { } priority) fields["priority"] = new { name = priority };
+
+        return fields.Count == 0
+            ? Task.CompletedTask
+            : SendAsync(HttpMethod.Put, IssuePath(issueKey), new { fields }, cancellationToken);
+    }
+
+    public Task AssignIssueAsync(string issueKey, string? assigneeId, CancellationToken cancellationToken = default) =>
+        // Cloud identifies people by accountId, Server by username; null unassigns on both.
+        SendAsync(HttpMethod.Put, $"{IssuePath(issueKey)}/assignee",
+            new Dictionary<string, object?> { [IsCloud ? "accountId" : "name"] = assigneeId }, cancellationToken);
+
+    public async Task<IReadOnlyList<JiraPerson>> GetAssignableUsersAsync(string issueKey, string? query = null, CancellationToken cancellationToken = default)
+    {
+        var search = Uri.EscapeDataString(query?.Trim() ?? "");
+        var path = $"{Api}/user/assignable/search?issueKey={Uri.EscapeDataString(issueKey)}&{(IsCloud ? "query" : "username")}={search}&maxResults=50";
+        var users = new List<JiraPerson>();
+        await foreach (var user in GetArrayAsync(path, MapAssignableUser, cancellationToken))
+        {
+            users.Add(user);
+        }
+
+        return users;
+    }
+
+    public async Task<IReadOnlyList<string>> GetPrioritiesAsync(CancellationToken cancellationToken = default)
+    {
+        var priorities = new List<string>();
+        await foreach (var name in GetArrayAsync($"{Api}/priority", p => JiraJson.GetString(p, "name"), cancellationToken))
+        {
+            if (name is not null) priorities.Add(name);
+        }
+
+        return priorities;
+    }
+
+    private string IssuePath(string issueKey) => $"{Api}/issue/{Uri.EscapeDataString(issueKey)}";
+
+    /// <summary>Cloud (v3) takes rich text as Atlassian Document Format; Server (v2) takes a plain string.</summary>
+    private object RichText(string text) => IsCloud ? JiraJson.TextToAdf(text) : text.Replace("\r\n", "\n");
+
+    /// <summary>Sends a change whose response has no body worth reading (Jira answers 204 No Content).</summary>
+    private async Task SendAsync(HttpMethod method, string path, object body, CancellationToken cancellationToken)
+    {
+        using var request = JiraAuth.CreateRequest(settings, method, path);
+        request.Content = JsonContent.Create(body);
+        using var response = await http.SendAsync(request, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw await CreateErrorAsync(response, method, cancellationToken);
+        }
+    }
+
     // ---- Paging ----
 
     /// <summary>
@@ -121,14 +214,16 @@ public sealed class JiraClient(HttpClient http, JiraConnectionSettings settings,
     /// <paramref name="itemsProperty"/> null means the response is a bare JSON array.
     /// </summary>
     private async IAsyncEnumerable<T> GetOffsetPagedAsync<T>(
-        string path, string? itemsProperty, Func<JsonElement, T> map, [EnumeratorCancellation] CancellationToken cancellationToken)
+        string path, string? itemsProperty, Func<JsonElement, T> map, [EnumeratorCancellation] CancellationToken cancellationToken,
+        int? pageSizeOverride = null)
     {
+        var size = pageSizeOverride ?? pageSize;
         var separator = path.Contains('?') ? '&' : '?';
         var startAt = 0;
 
         while (true)
         {
-            using var json = await GetJsonAsync($"{path}{separator}startAt={startAt}&maxResults={pageSize}", cancellationToken);
+            using var json = await GetJsonAsync($"{path}{separator}startAt={startAt}&maxResults={size}", cancellationToken);
             var root = json.RootElement;
             var items = itemsProperty is null ? root : JiraJson.Get(root, itemsProperty);
             var count = 0;
@@ -155,13 +250,14 @@ public sealed class JiraClient(HttpClient http, JiraConnectionSettings settings,
 
     /// <summary>nextPageToken paging, used by Jira Cloud's issue search.</summary>
     private async IAsyncEnumerable<T> GetTokenPagedAsync<T>(
-        string path, string itemsProperty, Func<JsonElement, T> map, [EnumeratorCancellation] CancellationToken cancellationToken)
+        string path, string itemsProperty, Func<JsonElement, T> map, [EnumeratorCancellation] CancellationToken cancellationToken,
+        int? pageSizeOverride = null)
     {
         string? token = null;
 
         do
         {
-            var page = $"{path}&maxResults={pageSize}" + (token is null ? "" : $"&nextPageToken={Uri.EscapeDataString(token)}");
+            var page = $"{path}&maxResults={pageSizeOverride ?? pageSize}" + (token is null ? "" : $"&nextPageToken={Uri.EscapeDataString(token)}");
             using var json = await GetJsonAsync(page, cancellationToken);
             var root = json.RootElement;
 
@@ -203,14 +299,14 @@ public sealed class JiraClient(HttpClient http, JiraConnectionSettings settings,
 
         if (!response.IsSuccessStatusCode)
         {
-            throw await CreateErrorAsync(response, cancellationToken);
+            throw await CreateErrorAsync(response, request.Method, cancellationToken);
         }
 
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         return await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
     }
 
-    private async Task<JiraApiException> CreateErrorAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    private async Task<JiraApiException> CreateErrorAsync(HttpResponseMessage response, HttpMethod method, CancellationToken cancellationToken)
     {
         var errors = new List<string>();
         try
@@ -235,7 +331,9 @@ public sealed class JiraClient(HttpClient http, JiraConnectionSettings settings,
         var reason = response.StatusCode switch
         {
             HttpStatusCode.Unauthorized => "Jira rejected the credentials",
-            HttpStatusCode.Forbidden => "This account isn't allowed to read that in Jira",
+            HttpStatusCode.Forbidden => method == HttpMethod.Get
+                ? "This account isn't allowed to read that in Jira"
+                : "This account isn't allowed to make that change in Jira",
             HttpStatusCode.NotFound => "Not found in Jira",
             HttpStatusCode.TooManyRequests => "Jira is rate limiting requests",
             _ => $"Jira returned {status} {response.ReasonPhrase}",
@@ -337,6 +435,21 @@ public sealed class JiraClient(HttpClient http, JiraConnectionSettings settings,
 
     private static JiraPerson MapPerson(JsonElement u) =>
         JiraJson.GetPerson(u) ?? new JiraPerson("", JiraJson.GetString(u, "displayName") ?? "", null, false);
+
+    // The assign call takes a username on Server, not the user key that GetPerson prefers.
+    private JiraPerson MapAssignableUser(JsonElement u) => IsCloud
+        ? MapPerson(u)
+        : new JiraPerson(
+            JiraJson.GetString(u, "name") ?? "",
+            JiraJson.GetString(u, "displayName") ?? JiraJson.GetString(u, "name") ?? "",
+            JiraJson.GetString(u, "emailAddress"),
+            JiraJson.GetBool(u, "active") ?? true);
+
+    private static JiraTransition MapTransition(JsonElement t) => new(
+        JiraJson.GetString(t, "id") ?? "",
+        JiraJson.GetString(t, "name") ?? "",
+        JiraJson.GetString(t, "to", "name") ?? JiraJson.GetString(t, "name") ?? "",
+        JiraJson.GetString(t, "to", "statusCategory", "key"));
 
     private static JiraBoard MapBoard(JsonElement b) => new(
         JiraJson.GetLong(b, "id") ?? 0,

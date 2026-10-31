@@ -67,6 +67,23 @@ public sealed class JiraSyncServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Only_one_fetch_runs_at_a_time()
+    {
+        var hold = new TaskCompletionSource();
+        _jira.HoldFields = hold;
+        var service = CreateService();
+
+        var first = service.SyncAsync(new JiraSyncOptions());
+        var second = await service.SyncAsync(new JiraSyncOptions());
+
+        Assert.Equal(JiraSyncStatus.Failed, second.Status);
+        Assert.Contains("already running", second.Error);
+        hold.SetResult();
+        Assert.Equal(JiraSyncStatus.Completed, (await first).Status);
+        Assert.Equal(JiraSyncStatus.Completed, (await service.SyncAsync(new JiraSyncOptions())).Status); // free again afterwards
+    }
+
+    [Fact]
     public async Task Fetches_only_selected_projects_and_warns_about_unknown_ones()
     {
         var result = await CreateService().SyncAsync(new JiraSyncOptions(["xyz", "NOPE"]));
@@ -141,15 +158,59 @@ public sealed class JiraSyncServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Incremental_fetch_never_removes_issues()
+    public async Task Refresh_removes_issues_deleted_in_jira_even_though_they_never_show_as_updated()
     {
         await CreateService().SyncAsync(new JiraSyncOptions(["ABC"]));
-        _jira.IssuesByProject["ABC"].Clear(); // "nothing changed"
+        _jira.IssuesByProject["ABC"].Clear();          // nothing was updated…
+        _jira.ExistingIssueIds["ABC"] = ["1"];          // …but ABC-2 was deleted
+        _time.Now = Start.AddMinutes(30);
+
+        var result = await CreateService().SyncAsync(new JiraSyncOptions(["ABC"]));
+
+        Assert.Equal(1, result.IssuesRemoved);
+        Assert.Equal(1, Count("issues"));
+        Assert.Equal("project = \"ABC\" ORDER BY updated ASC", _jira.IdQueries.Single()); // the whole project, IDs only
+    }
+
+    [Fact]
+    public async Task Refresh_with_nothing_deleted_keeps_everything()
+    {
+        await CreateService().SyncAsync(new JiraSyncOptions(["ABC"]));
+        _jira.IssuesByProject["ABC"].Clear(); // nothing changed, nothing deleted
+        _jira.ExistingIssueIds["ABC"] = ["1", "2"];
 
         var result = await CreateService().SyncAsync(new JiraSyncOptions(["ABC"]));
 
         Assert.Equal(0, result.IssuesRemoved);
         Assert.Equal(2, Count("issues"));
+    }
+
+    [Fact]
+    public async Task Filtered_fetch_never_removes_issues()
+    {
+        // With a JQL filter the local copy is only part of the project, so missing issues may just not match it.
+        await CreateService().SyncAsync(new JiraSyncOptions(["ABC"], "status != Done"));
+        _jira.ExistingIssueIds["ABC"] = [];
+
+        var result = await CreateService().SyncAsync(new JiraSyncOptions(["ABC"], "status != Done"));
+
+        Assert.Equal(0, result.IssuesRemoved);
+        Assert.Equal(2, Count("issues"));
+        Assert.Empty(_jira.IdQueries);
+    }
+
+    [Fact]
+    public async Task If_jira_cant_list_the_issues_nothing_is_removed_and_it_says_so()
+    {
+        await CreateService().SyncAsync(new JiraSyncOptions(["ABC"]));
+        _jira.IdsError = TestData.Forbidden();
+
+        var result = await CreateService().SyncAsync(new JiraSyncOptions(["ABC"]));
+
+        Assert.Equal(JiraSyncStatus.Completed, result.Status);
+        Assert.Equal(0, result.IssuesRemoved);
+        Assert.Equal(2, Count("issues"));
+        Assert.StartsWith("Couldn't check ABC for deleted issues", Assert.Single(result.Warnings));
     }
 
     [Fact]

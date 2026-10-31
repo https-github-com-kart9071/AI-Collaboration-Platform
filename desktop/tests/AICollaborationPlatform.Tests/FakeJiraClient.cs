@@ -59,11 +59,116 @@ internal sealed partial class FakeJiraClient : IJiraClient
         }
     }
 
+    /// <summary>
+    /// Issues that exist in Jira, per project, when that differs from what searches return
+    /// (tests empty <see cref="IssuesByProject"/> to mean "nothing changed", not "everything was deleted").
+    /// </summary>
+    public Dictionary<string, List<string>> ExistingIssueIds { get; } = [];
+
+    public List<string> IdQueries { get; } = [];
+
+    public Exception? IdsError { get; set; }
+
+    public IAsyncEnumerable<string> GetIssueIdsAsync(string jql, CancellationToken cancellationToken = default)
+    {
+        IdQueries.Add(jql);
+        if (IdsError is not null) return Throwing<string>(IdsError);
+        var project = ProjectOf(jql);
+        return Yield(ExistingIssueIds.GetValueOrDefault(project)
+            ?? (IssuesByProject.GetValueOrDefault(project) ?? []).Select(i => i.Id).ToList(), cancellationToken);
+    }
+
     public Task<long> CountIssuesAsync(string jql, CancellationToken cancellationToken = default) =>
         Task.FromResult((long)(IssuesByProject.GetValueOrDefault(ProjectOf(jql))?.Count ?? 0));
 
-    public Task<JiraIssue> GetIssueAsync(string issueKey, CancellationToken cancellationToken = default) =>
-        Task.FromResult(IssuesByProject.Values.SelectMany(i => i).First(i => i.Key == issueKey));
+    public Task<JiraIssue> GetIssueAsync(string issueKey, CancellationToken cancellationToken = default)
+    {
+        Fail("get");
+        return Task.FromResult(IssuesByProject.Values.SelectMany(i => i).First(i => i.Key == issueKey));
+    }
+
+    // ---- Changes: applied to the in-memory issues, so reading the issue again shows them ----
+
+    /// <summary>Every change made, in order, e.g. "assign ABC-1 acc-riya".</summary>
+    public List<string> Changes { get; } = [];
+
+    /// <summary>Makes a call fail: "get", "comment", "transition", "update", "assign", "transitions", "assignable", "priorities".</summary>
+    public Dictionary<string, Exception> FailOn { get; } = [];
+
+    public List<JiraTransition> Transitions { get; } = [];
+
+    public List<string> Priorities { get; } = ["Highest", "High", "Medium", "Low", "Lowest"];
+
+    public List<string> AssignableQueries { get; } = [];
+
+    public Task<JiraComment> AddCommentAsync(string issueKey, string body, CancellationToken cancellationToken = default)
+    {
+        Fail("comment");
+        var comment = new JiraComment($"new-{Changes.Count}", TestData.Alex, body, DateTimeOffset.UtcNow, null);
+        Change(issueKey, $"comment {issueKey} {body}", i => i with { Comments = [.. i.Comments, comment], CommentTotal = i.CommentTotal + 1 });
+        return Task.FromResult(comment);
+    }
+
+    public Task<IReadOnlyList<JiraTransition>> GetTransitionsAsync(string issueKey, CancellationToken cancellationToken = default)
+    {
+        Fail("transitions");
+        return Task.FromResult<IReadOnlyList<JiraTransition>>(Transitions);
+    }
+
+    public Task TransitionIssueAsync(string issueKey, string transitionId, CancellationToken cancellationToken = default)
+    {
+        Fail("transition");
+        var to = Transitions.First(t => t.Id == transitionId);
+        Change(issueKey, $"transition {issueKey} {transitionId}", i => i with { Status = to.ToStatus, StatusCategory = to.ToStatusCategory });
+        return Task.CompletedTask;
+    }
+
+    public Task UpdateIssueAsync(string issueKey, JiraIssueUpdate update, CancellationToken cancellationToken = default)
+    {
+        Fail("update");
+        Change(issueKey, $"update {issueKey} {update}", i => i with
+        {
+            Summary = update.Summary ?? i.Summary,
+            Description = update.Description is null ? i.Description : update.Description.Length == 0 ? null : update.Description,
+            Priority = update.Priority ?? i.Priority,
+        });
+        return Task.CompletedTask;
+    }
+
+    public Task AssignIssueAsync(string issueKey, string? assigneeId, CancellationToken cancellationToken = default)
+    {
+        Fail("assign");
+        Change(issueKey, $"assign {issueKey} {assigneeId ?? "nobody"}", i => i with { Assignee = Users.FirstOrDefault(u => u.Id == assigneeId) });
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<JiraPerson>> GetAssignableUsersAsync(string issueKey, string? query = null, CancellationToken cancellationToken = default)
+    {
+        Fail("assignable");
+        AssignableQueries.Add(query ?? "");
+        return Task.FromResult<IReadOnlyList<JiraPerson>>(
+            Users.Where(u => string.IsNullOrEmpty(query) || u.DisplayName.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList());
+    }
+
+    public Task<IReadOnlyList<string>> GetPrioritiesAsync(CancellationToken cancellationToken = default)
+    {
+        Fail("priorities");
+        return Task.FromResult<IReadOnlyList<string>>(Priorities);
+    }
+
+    private void Fail(string call)
+    {
+        if (FailOn.TryGetValue(call, out var error)) throw error;
+    }
+
+    /// <summary>Replaces the issue with its changed copy and bumps its Updated time, like Jira does.</summary>
+    private void Change(string issueKey, string description, Func<JiraIssue, JiraIssue> change)
+    {
+        var list = IssuesByProject.Values.First(l => l.Any(i => i.Key == issueKey));
+        var index = list.FindIndex(i => i.Key == issueKey);
+        list[index] = change(list[index]) with { Updated = DateTimeOffset.UtcNow };
+        Changes.Add(description);
+    }
 
     public IAsyncEnumerable<JiraComment> GetCommentsAsync(string issueKey, CancellationToken cancellationToken = default)
     {
@@ -91,8 +196,14 @@ internal sealed partial class FakeJiraClient : IJiraClient
     public IAsyncEnumerable<JiraSprint> GetSprintsAsync(long boardId, CancellationToken cancellationToken = default) =>
         Yield(SprintsByBoard.GetValueOrDefault(boardId) ?? [], cancellationToken);
 
-    public Task<IReadOnlyList<JiraField>> GetFieldsAsync(CancellationToken cancellationToken = default) =>
-        Task.FromResult<IReadOnlyList<JiraField>>(Fields);
+    /// <summary>When set, the first call (fields) waits for it, so a test can hold a fetch "running".</summary>
+    public TaskCompletionSource? HoldFields { get; set; }
+
+    public async Task<IReadOnlyList<JiraField>> GetFieldsAsync(CancellationToken cancellationToken = default)
+    {
+        if (HoldFields is { } hold) await hold.Task;
+        return Fields;
+    }
 
     private static string ProjectOf(string jql) => ProjectInJql().Match(jql).Groups[1].Value;
 

@@ -39,6 +39,9 @@ public sealed class JiraSyncService(
 {
     private const int BatchSize = 50;
 
+    // One fetch at a time: the Jira page's Fetch and the data page's Refresh write to the same database.
+    private readonly SemaphoreSlim _runGate = new(1, 1);
+
     /// <summary>Extra overlap for incremental fetches, so nothing slips between runs.</summary>
     private static readonly TimeSpan IncrementalOverlap = TimeSpan.FromMinutes(5);
 
@@ -59,6 +62,25 @@ public sealed class JiraSyncService(
 
     public async Task<JiraSyncResult> SyncAsync(
         JiraSyncOptions options, IProgress<JiraSyncProgress>? progress = null, CancellationToken cancellationToken = default)
+    {
+        if (!await _runGate.WaitAsync(0, CancellationToken.None))
+        {
+            return new JiraSyncResult(JiraSyncStatus.Failed, 0, 0, 0, 0, 0, 0, TimeSpan.Zero,
+                "Another fetch is already running. Try again when it finishes.", []);
+        }
+
+        try
+        {
+            return await RunSyncAsync(options, progress, cancellationToken);
+        }
+        finally
+        {
+            _runGate.Release();
+        }
+    }
+
+    private async Task<JiraSyncResult> RunSyncAsync(
+        JiraSyncOptions options, IProgress<JiraSyncProgress>? progress, CancellationToken cancellationToken)
     {
         var client = CreateClient();
         var site = session.Settings!.BaseUrl.AbsoluteUri.TrimEnd('/');
@@ -177,10 +199,16 @@ public sealed class JiraSyncService(
 
         Flush();
 
-        // A complete, unfiltered fetch shows exactly which issues exist, so drop ones that were deleted in Jira.
-        if (since is null && filter is null)
+        // Drop issues that were deleted in Jira (or moved to another project). A full fetch has just seen every issue.
+        // An incremental one hasn't: deleted issues never show up as "updated", so ask Jira which IDs still exist.
+        // Skipped with a JQL filter, where the local copy is only part of the project anyway.
+        if (filter is null)
         {
-            run.IssuesRemoved += db.DeleteIssuesNotIn(project.Key, seenIssueIds);
+            var existing = since is null ? seenIssueIds : await ListExistingIssueIdsAsync(client, project.Key, run, cancellationToken);
+            if (existing is not null)
+            {
+                run.IssuesRemoved += db.DeleteIssuesNotIn(project.Key, existing);
+            }
         }
 
         db.MarkProjectSynced(project.Key, startedAt, filter);
@@ -188,6 +216,28 @@ public sealed class JiraSyncService(
 
         progress?.Report(new JiraSyncProgress(JiraSyncPhase.Boards, index, count, project.Key, done, total));
         await SyncBoardsAsync(client, db, project.Key, run, cancellationToken);
+    }
+
+    /// <summary>IDs of every issue in the project now, or null (with a warning) if Jira couldn't say; then nothing is removed.</summary>
+    private async Task<HashSet<string>?> ListExistingIssueIdsAsync(
+        IJiraClient client, string projectKey, RunCounters run, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var ids = new HashSet<string>();
+            await foreach (var id in client.GetIssueIdsAsync(BuildJql(projectKey, null, null, default), cancellationToken))
+            {
+                ids.Add(id);
+            }
+
+            return ids;
+        }
+        catch (Exception ex) when (ex is JiraApiException or HttpRequestException)
+        {
+            logger.LogWarning(ex, "Couldn't list the issues in {Project}; deleted issues are kept until the next full fetch", projectKey);
+            run.Warnings.Add($"Couldn't check {projectKey} for deleted issues: {ex.Message}");
+            return null;
+        }
     }
 
     private async Task SyncUsersAsync(IJiraClient client, JiraDatabase db, RunCounters run, CancellationToken cancellationToken)

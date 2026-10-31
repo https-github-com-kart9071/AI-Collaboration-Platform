@@ -32,12 +32,58 @@
         <!-- Read-only text people can still select and copy -->
         <Style x:Key="SelectableText" TargetType="TextBox">
             <Setter Property="IsReadOnly" Value="True" />
+            <Setter Property="CaretBrush" Value="{StaticResource TextPrimaryBrush}" />
             <Setter Property="TextWrapping" Value="Wrap" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Padding" Value="0" />
             <Setter Property="FontSize" Value="14" />
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        </Style>
+        <!-- What the last change did ("Comment added.") or why it didn't work; coloured by outcome. DataContext: the editor. -->
+        <Style x:Key="EditorBanner" TargetType="Border">
+            <Setter Property="Padding" Value="20,9" />
+            <Setter Property="Background" Value="{StaticResource NeutralButtonBrush}" />
+            <Setter Property="TextElement.Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Message}" Value="">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding MessageKind}" Value="Success">
+                    <Setter Property="Background" Value="{StaticResource SuccessBackgroundBrush}" />
+                    <Setter Property="TextElement.Foreground" Value="{StaticResource SuccessBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding MessageKind}" Value="Warning">
+                    <Setter Property="Background" Value="{StaticResource WarningBackgroundBrush}" />
+                    <Setter Property="TextElement.Foreground" Value="{StaticResource WarningBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding MessageKind}" Value="Error">
+                    <Setter Property="Background" Value="{StaticResource ErrorBackgroundBrush}" />
+                    <Setter Property="TextElement.Foreground" Value="{StaticResource ErrorBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <!-- A row in the assignee picker -->
+        <Style x:Key="PersonItem" TargetType="ListBoxItem">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd" Background="Transparent" BorderThickness="2,0,0,0" BorderBrush="Transparent" Padding="10,5">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource NeutralButtonBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource InfoBackgroundBrush}" />
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </UserControl.Resources>
 
@@ -63,10 +109,47 @@
                 </StackPanel>
             </StackPanel>
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Bottom">
-                <local:Spinner VerticalAlignment="Center" Margin="0,0,10,0"
-                               Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}" />
+                <local:Spinner VerticalAlignment="Center" Margin="0,0,10,0">
+                    <local:Spinner.Style>
+                        <Style TargetType="local:Spinner">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsRefreshing}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </local:Spinner.Style>
+                </local:Spinner>
+                <!-- What Refresh is doing, or how it went; coloured by outcome -->
+                <TextBlock Text="{Binding RefreshMessage}" FontSize="13" VerticalAlignment="Center" Margin="0,0,12,0"
+                           MaxWidth="520" TextTrimming="CharacterEllipsis" ToolTip="{Binding RefreshMessage}"
+                           AutomationProperties.Name="Refresh status" AutomationProperties.LiveSetting="Polite">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding RefreshKind}" Value="Success">
+                                    <Setter Property="Foreground" Value="{StaticResource SuccessBrush}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding RefreshKind}" Value="Warning">
+                                    <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding RefreshKind}" Value="Error">
+                                    <Setter Property="Foreground" Value="{StaticResource ErrorBrush}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <Button Style="{StaticResource SecondaryButton}" Command="{Binding CancelRefreshCommand}" Padding="12,6" Margin="0,0,8,0"
+                        Content="Cancel" AutomationProperties.Name="Cancel refresh"
+                        Visibility="{Binding IsRefreshing, Converter={StaticResource BoolToVisibility}}" />
                 <Button Style="{StaticResource SecondaryButton}" Command="{Binding RefreshCommand}" Padding="12,6"
-                        AutomationProperties.Name="Refresh data">
+                        AutomationProperties.Name="Refresh data" ToolTip="Get the latest changes from Jira">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE72C;" FontFamily="{StaticResource IconFont}" FontSize="13" VerticalAlignment="Center" />
                         <TextBlock Text="Refresh" Margin="8,0,0,0" VerticalAlignment="Center" />
@@ -91,6 +174,7 @@
                                Foreground="{StaticResource TextSecondaryBrush}" />
                     <ListBox ItemsSource="{Binding Projects}" SelectedItem="{Binding SelectedProject}"
                              BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             VirtualizingPanel.ScrollUnit="Pixel" local:SmoothScroll.IsEnabled="True"
                              AutomationProperties.Name="Projects">
                         <ListBox.ItemContainerStyle>
                             <Style TargetType="ListBoxItem">
@@ -180,13 +264,16 @@
                         <DataGrid x:Name="IssuesGrid" Style="{StaticResource DataTable}"
                                   ItemsSource="{Binding Issues}" SelectedItem="{Binding SelectedIssue}"
                                   Sorting="OnSorting" MouseDoubleClick="OnRowDoubleClick" PreviewKeyDown="OnGridKeyDown"
+                                  local:SmoothScroll.IsEnabled="True"
                                   AutomationProperties.Name="Issues">
+                            <!-- Cells bind straight to IssueRow's ready-made visuals. Icons are shared, pre-drawn images rather than
+                                 Paths: every row scrolling into view re-lays-out its cells, and Paths are slow to measure. -->
                             <DataGrid.Columns>
                                 <DataGridTemplateColumn Header="Type" SortMemberPath="Type" Width="58">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <ContentPresenter Content="{Binding Type, TargetNullValue=''}" ContentTemplate="{StaticResource IssueTypeIconTemplate}"
-                                                              HorizontalAlignment="Left" VerticalAlignment="Center" />
+                                            <Image Width="16" Height="16" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                   Source="{Binding TypeIcon}" ToolTip="{Binding Type}" />
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
@@ -197,8 +284,9 @@
                                 <DataGridTemplateColumn Header="Status" SortMemberPath="Status" Width="140">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <Border Style="{StaticResource StatusPill}" ToolTip="{Binding Status}">
-                                                <TextBlock Style="{StaticResource StatusPillText}" Text="{Binding Status, Converter={StaticResource UpperCase}}" />
+                                            <Border CornerRadius="3" Padding="5,1" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                    Background="{Binding StatusBackground}" ToolTip="{Binding Status}">
+                                                <TextBlock Style="{StaticResource StatusPillText}" Text="{Binding StatusText}" Foreground="{Binding StatusForeground}" />
                                             </Border>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
@@ -207,8 +295,14 @@
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <DockPanel VerticalAlignment="Center">
-                                                <ContentPresenter DockPanel.Dock="Left" Content="{Binding Assignee, TargetNullValue=''}"
-                                                                  ContentTemplate="{StaticResource AvatarTemplate}" Margin="0,0,8,0" />
+                                                <Grid DockPanel.Dock="Left" Width="24" Height="24" Margin="0,0,8,0">
+                                                    <Ellipse Fill="{Binding AssigneeColor}" />
+                                                    <TextBlock Text="{Binding AssigneeInitials}" Foreground="White" FontSize="10" FontWeight="SemiBold"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    <TextBlock Text="&#xE77B;" FontFamily="{StaticResource IconFont}" FontSize="12" Foreground="White"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                               Visibility="{Binding IsUnassigned, Converter={StaticResource BoolToVisibility}}" />
+                                                </Grid>
                                                 <TextBlock Style="{StaticResource CellText}" Text="{Binding Assignee, TargetNullValue=Unassigned}" />
                                             </DockPanel>
                                         </DataTemplate>
@@ -218,8 +312,7 @@
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <DockPanel VerticalAlignment="Center">
-                                                <ContentPresenter DockPanel.Dock="Left" Content="{Binding Priority, TargetNullValue=''}"
-                                                                  ContentTemplate="{StaticResource PriorityIconTemplate}" Margin="0,0,6,0" />
+                                                <Image DockPanel.Dock="Left" Width="16" Height="16" Margin="0,0,6,0" Source="{Binding PriorityIcon}" />
                                                 <TextBlock Style="{StaticResource CellText}" Text="{Binding Priority}" />
                                             </DockPanel>
                                         </DataTemplate>
@@ -287,20 +380,97 @@
                                     </DockPanel>
                                 </Border>
 
+                                <!-- Why changes can't be made right now (e.g. not connected) -->
+                                <Border DockPanel.Dock="Top" Padding="20,9" Background="{StaticResource InfoBackgroundBrush}"
+                                        DataContext="{Binding DataContext.Editor, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        Visibility="{Binding CannotEditReason, Converter={StaticResource StringToVisibility}}">
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Left" Text="&#xE946;" FontFamily="{StaticResource IconFont}" FontSize="14"
+                                                   Foreground="{StaticResource AccentBrush}" Margin="0,1,10,0" VerticalAlignment="Top" />
+                                        <TextBlock Text="{Binding CannotEditReason}" FontSize="13" TextWrapping="Wrap" Foreground="{StaticResource TextPrimaryBrush}"
+                                                   AutomationProperties.Name="Why editing is off" />
+                                    </DockPanel>
+                                </Border>
+
+                                <!-- How the last change went -->
+                                <Border DockPanel.Dock="Top" Style="{StaticResource EditorBanner}"
+                                        DataContext="{Binding DataContext.Editor, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                                    <DockPanel>
+                                        <local:Spinner DockPanel.Dock="Left" Width="14" Height="14" Margin="0,0,10,0" VerticalAlignment="Center"
+                                                       Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
+                                        <TextBlock Text="{Binding Message}" FontSize="13" TextWrapping="Wrap" VerticalAlignment="Center"
+                                                   AutomationProperties.Name="Edit status" AutomationProperties.LiveSetting="Polite" />
+                                    </DockPanel>
+                                </Border>
+
                                 <!-- Everything below scrolls as one page, like Jira -->
-                                <ScrollViewer VerticalScrollBarVisibility="Auto" PreviewMouseWheel="OnDetailMouseWheel">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto" local:SmoothScroll.IsEnabled="True" local:SmoothScroll.PixelsPerNotch="120">
                                     <StackPanel Margin="24,18,24,28">
-                                        <TextBox Text="{Binding Summary, Mode=OneWay}" Style="{StaticResource SelectableText}" FontSize="22" FontWeight="SemiBold"
-                                                 AutomationProperties.Name="Summary" />
+                                        <!-- Summary: read-only until the pencil is clicked; Enter saves, Esc cancels -->
+                                        <Grid DataContext="{Binding DataContext.Editor, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                                            <DockPanel Visibility="{Binding IsEditingSummary, Converter={StaticResource InverseBoolToVisibility}}">
+                                                <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Content="&#xE70F;" VerticalAlignment="Top"
+                                                        Margin="8,2,0,0" ToolTip="Edit summary" AutomationProperties.Name="Edit summary"
+                                                        Command="{Binding EditSummaryCommand}"
+                                                        Visibility="{Binding CanEdit, Converter={StaticResource BoolToVisibility}}" />
+                                                <TextBox Text="{Binding Issue.Summary, Mode=OneWay}" Style="{StaticResource SelectableText}" FontSize="22" FontWeight="SemiBold"
+                                                         AutomationProperties.Name="Summary" />
+                                            </DockPanel>
+                                            <StackPanel Visibility="{Binding IsEditingSummary, Converter={StaticResource BoolToVisibility}}">
+                                                <TextBox Style="{StaticResource TextInput}" FontSize="20" FontWeight="SemiBold" MaxLength="255"
+                                                         Text="{Binding SummaryDraft, UpdateSourceTrigger=PropertyChanged}"
+                                                         IsVisibleChanged="OnEditorShown" AutomationProperties.Name="Summary editor">
+                                                    <TextBox.InputBindings>
+                                                        <KeyBinding Key="Enter" Command="{Binding SaveSummaryCommand}" />
+                                                    </TextBox.InputBindings>
+                                                </TextBox>
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+                                                    <Button Style="{StaticResource PrimaryButton}" Content="Save" Padding="14,6"
+                                                            Command="{Binding SaveSummaryCommand}" AutomationProperties.Name="Save summary" />
+                                                    <Button Style="{StaticResource SecondaryButton}" Content="Cancel" Padding="14,6" Margin="8,0,0,0"
+                                                            Command="{Binding CancelSummaryCommand}" AutomationProperties.Name="Cancel summary" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Grid>
 
                                         <Border Style="{StaticResource StatusPill}" Margin="0,14,0,0" Padding="8,4">
                                             <TextBlock Style="{StaticResource StatusPillText}" FontSize="12"
                                                        Text="{Binding Status, Converter={StaticResource UpperCase}}" />
                                         </Border>
 
-                                        <TextBlock Style="{StaticResource SectionTitle}" Text="Description" />
-                                        <TextBox Text="{Binding Description, Mode=OneWay, TargetNullValue=No description.}"
-                                                 Style="{StaticResource SelectableText}" AutomationProperties.Name="Description" />
+                                        <!-- Description: edit in place with Save / Cancel -->
+                                        <StackPanel DataContext="{Binding DataContext.Editor, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                                            <DockPanel Margin="0,22,0,8">
+                                                <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Content="&#xE70F;"
+                                                        ToolTip="Edit description" AutomationProperties.Name="Edit description"
+                                                        Command="{Binding EditDescriptionCommand}">
+                                                    <Button.Visibility>
+                                                        <MultiBinding Converter="{StaticResource AllTrueToVisibility}">
+                                                            <Binding Path="CanEdit" />
+                                                            <Binding Path="IsEditingDescription" Converter="{StaticResource InverseBool}" />
+                                                        </MultiBinding>
+                                                    </Button.Visibility>
+                                                </Button>
+                                                <TextBlock Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center" Text="Description" />
+                                            </DockPanel>
+                                            <TextBox Text="{Binding Issue.Description, Mode=OneWay, TargetNullValue=No description.}"
+                                                     Style="{StaticResource SelectableText}" AutomationProperties.Name="Description"
+                                                     Visibility="{Binding IsEditingDescription, Converter={StaticResource InverseBoolToVisibility}}" />
+                                            <StackPanel Visibility="{Binding IsEditingDescription, Converter={StaticResource BoolToVisibility}}">
+                                                <TextBox Style="{StaticResource TextArea}" MinHeight="140" MaxHeight="420"
+                                                         Text="{Binding DescriptionDraft, UpdateSourceTrigger=PropertyChanged}"
+                                                         IsVisibleChanged="OnEditorShown" AutomationProperties.Name="Description editor" />
+                                                <TextBlock Margin="0,6,0,0" FontSize="12" TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}"
+                                                           Text="Saving replaces any formatting in Jira (bold, lists, links, images) with this plain text."
+                                                           Visibility="{Binding DescriptionLosesFormatting, Converter={StaticResource BoolToVisibility}}" />
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+                                                    <Button Style="{StaticResource PrimaryButton}" Content="Save" Padding="14,6"
+                                                            Command="{Binding SaveDescriptionCommand}" AutomationProperties.Name="Save description" />
+                                                    <Button Style="{StaticResource SecondaryButton}" Content="Cancel" Padding="14,6" Margin="8,0,0,0"
+                                                            Command="{Binding CancelDescriptionCommand}" AutomationProperties.Name="Cancel description" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </StackPanel>
 
                                         <!-- Attachments, only when there are some -->
                                         <StackPanel>
@@ -346,10 +516,88 @@
                                         <!-- Details box, like the right-hand panel in Jira -->
                                         <Border Margin="0,22,0,0" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="3">
                                             <StackPanel>
-                                                <Border Padding="14,10" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
-                                                    <TextBlock Text="Details" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
+                                                <Border Padding="14,8" MinHeight="44" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+                                                    <DockPanel>
+                                                        <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}" Padding="10,4" FontSize="13"
+                                                                DataContext="{Binding DataContext.Editor, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                Command="{Binding EditDetailsCommand}" AutomationProperties.Name="Edit details"
+                                                                ToolTip="Change status, assignee or priority">
+                                                            <Button.Visibility>
+                                                                <MultiBinding Converter="{StaticResource AllTrueToVisibility}">
+                                                                    <Binding Path="CanEdit" />
+                                                                    <Binding Path="IsEditingDetails" Converter="{StaticResource InverseBool}" />
+                                                                </MultiBinding>
+                                                            </Button.Visibility>
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="&#xE70F;" FontFamily="{StaticResource IconFont}" FontSize="12" VerticalAlignment="Center" />
+                                                                <TextBlock Text="Edit" Margin="6,0,0,0" VerticalAlignment="Center" />
+                                                            </StackPanel>
+                                                        </Button>
+                                                        <TextBlock Text="Details" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                                   Foreground="{StaticResource TextPrimaryBrush}" />
+                                                    </DockPanel>
                                                 </Border>
-                                                <Grid Margin="14,6,14,8">
+
+                                                <!-- Editing status, assignee and priority. Each starts on "(current)"; Save sends only what was changed. -->
+                                                <StackPanel Margin="14,12,14,16"
+                                                            DataContext="{Binding DataContext.Editor, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            Visibility="{Binding IsEditingDetails, Converter={StaticResource BoolToVisibility}}">
+                                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Status" />
+                                                    <ComboBox Style="{StaticResource FilterCombo}" MinWidth="260" HorizontalAlignment="Left"
+                                                              ItemsSource="{Binding StatusChoices}" SelectedItem="{Binding SelectedStatus}"
+                                                              AutomationProperties.Name="Status" />
+                                                    <TextBlock Margin="0,4,0,0" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"
+                                                               Text="Only the moves your Jira workflow allows from here are listed." />
+
+                                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Assignee" Margin="0,16,0,6" />
+                                                    <Grid>
+                                                        <TextBox Style="{StaticResource TextInput}" Padding="32,6,10,6"
+                                                                 Text="{Binding AssigneeSearch, UpdateSourceTrigger=PropertyChanged}"
+                                                                 AutomationProperties.Name="Search people" />
+                                                        <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="13" Margin="11,0,0,0"
+                                                                   Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" IsHitTestVisible="False" />
+                                                        <TextBlock Style="{StaticResource Placeholder}" Tag="{Binding AssigneeSearch}" Text="Search people by name or email"
+                                                                   Margin="33,0,0,0" VerticalAlignment="Center" />
+                                                    </Grid>
+                                                    <ListBox Margin="0,6,0,0" MaxHeight="216" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                                             ItemsSource="{Binding AssigneeChoices}" SelectedItem="{Binding SelectedAssignee}"
+                                                             ItemContainerStyle="{StaticResource PersonItem}" AutomationProperties.Name="Assignee"
+                                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                                        <ListBox.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <StackPanel Orientation="Horizontal" AutomationProperties.Name="{Binding Name}">
+                                                                    <ContentPresenter Content="{Binding AvatarName}" ContentTemplate="{StaticResource AvatarTemplate}"
+                                                                                      VerticalAlignment="Center" Margin="0,0,10,0" />
+                                                                    <TextBlock Text="{Binding Name}" FontSize="14" VerticalAlignment="Center"
+                                                                               Foreground="{StaticResource TextPrimaryBrush}" />
+                                                                    <TextBlock Text="  (current)" FontSize="13" VerticalAlignment="Center"
+                                                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                                                               Visibility="{Binding IsCurrent, Converter={StaticResource BoolToVisibility}}" />
+                                                                </StackPanel>
+                                                            </DataTemplate>
+                                                        </ListBox.ItemTemplate>
+                                                    </ListBox>
+
+                                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Priority" Margin="0,16,0,6" />
+                                                    <ComboBox Style="{StaticResource FilterCombo}" MinWidth="260" HorizontalAlignment="Left"
+                                                              ItemsSource="{Binding PriorityChoices}" SelectedItem="{Binding SelectedPriority}"
+                                                              AutomationProperties.Name="Priority" />
+
+                                                    <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+                                                        <Button Style="{StaticResource PrimaryButton}" Content="Save" Padding="14,6"
+                                                                Command="{Binding SaveDetailsCommand}" AutomationProperties.Name="Save details" />
+                                                        <Button Style="{StaticResource SecondaryButton}" Content="Cancel" Padding="14,6" Margin="8,0,0,0"
+                                                                Command="{Binding CancelDetailsCommand}" AutomationProperties.Name="Cancel details" />
+                                                        <StackPanel Orientation="Horizontal" Margin="14,0,0,0" VerticalAlignment="Center"
+                                                                    Visibility="{Binding IsLoadingChoices, Converter={StaticResource BoolToVisibility}}">
+                                                            <local:Spinner Width="14" Height="14" Margin="0,0,8,0" />
+                                                            <TextBlock Text="Loading choices from Jira…" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" />
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                </StackPanel>
+
+                                                <Grid Margin="14,6,14,8"
+                                                      Visibility="{Binding DataContext.Editor.IsEditingDetails, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource InverseBoolToVisibility}}">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="120" />
                                                         <ColumnDefinition Width="*" />
@@ -425,6 +673,28 @@
                                                     SelectedIndex="{Binding DataContext.DetailTabIndex, RelativeSource={RelativeSource AncestorType=UserControl}}">
                                             <TabItem Header="{Binding Comments.Count, Converter={StaticResource Format}, ConverterParameter='Comments ({0})'}">
                                                 <StackPanel>
+                                                    <!-- New comment: sent only when "Add comment" (or Ctrl+Enter) is pressed -->
+                                                    <StackPanel Margin="0,0,0,22"
+                                                                DataContext="{Binding DataContext.Editor, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                                                        <Grid>
+                                                            <TextBox Style="{StaticResource TextArea}" MinHeight="72" MaxHeight="300"
+                                                                     Text="{Binding CommentDraft, UpdateSourceTrigger=PropertyChanged}"
+                                                                     IsEnabled="{Binding CanEdit}" AutomationProperties.Name="New comment">
+                                                                <TextBox.InputBindings>
+                                                                    <KeyBinding Key="Enter" Modifiers="Control" Command="{Binding AddCommentCommand}" />
+                                                                </TextBox.InputBindings>
+                                                            </TextBox>
+                                                            <TextBlock Style="{StaticResource Placeholder}" Tag="{Binding CommentDraft}" Text="Add a comment…"
+                                                                       Margin="12,9,0,0" VerticalAlignment="Top" />
+                                                        </Grid>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                                            <Button Style="{StaticResource PrimaryButton}" Content="Add comment" Padding="14,6"
+                                                                    Command="{Binding AddCommentCommand}" AutomationProperties.Name="Add comment" />
+                                                            <TextBlock Text="or press Ctrl+Enter" FontSize="12" Margin="10,0,0,0" VerticalAlignment="Center"
+                                                                       Foreground="{StaticResource TextSecondaryBrush}" />
+                                                        </StackPanel>
+                                                    </StackPanel>
+
                                                     <TextBlock Text="No comments yet." FontSize="14" Foreground="{StaticResource TextSecondaryBrush}"
                                                                Visibility="{Binding Comments.Count, Converter={StaticResource ZeroToVisibility}}" />
                                                     <ItemsControl ItemsSource="{Binding Comments}">

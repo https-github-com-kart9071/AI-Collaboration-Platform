@@ -4,29 +4,33 @@
              xmlns:vm="clr-namespace:AICollaborationPlatform.App.ViewModels"
              xmlns:views="clr-namespace:AICollaborationPlatform.App.Views"
              xmlns:conv="clr-namespace:AICollaborationPlatform.App.Converters"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
              ShutdownMode="OnMainWindowClose">
     <Application.Resources>
-        <!-- Theme: colours follow Atlassian's design system, so the app feels at home next to Jira -->
-        <SolidColorBrush x:Key="SidebarBrush" Color="#FFFFFF" />
-        <SolidColorBrush x:Key="SidebarHoverBrush" Color="#F1F2F4" />
-        <SolidColorBrush x:Key="SidebarTextBrush" Color="#44546F" />
-        <SolidColorBrush x:Key="AccentBrush" Color="#0C66E4" />
-        <SolidColorBrush x:Key="AccentHoverBrush" Color="#0055CC" />
-        <SolidColorBrush x:Key="ContentBrush" Color="#F7F8F9" />
-        <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF" />
-        <SolidColorBrush x:Key="BorderBrush" Color="#DCDFE4" />
-        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#172B4D" />
-        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#626F86" />
-        <SolidColorBrush x:Key="InputBorderBrush" Color="#B7BCC6" />
-        <SolidColorBrush x:Key="NeutralButtonBrush" Color="#F1F2F4" />
-        <SolidColorBrush x:Key="NeutralButtonHoverBrush" Color="#DCDFE4" />
-        <SolidColorBrush x:Key="SuccessBrush" Color="#216E4E" />
-        <SolidColorBrush x:Key="SuccessBackgroundBrush" Color="#DCFFF1" />
-        <SolidColorBrush x:Key="ErrorBrush" Color="#AE2E24" />
-        <SolidColorBrush x:Key="ErrorBackgroundBrush" Color="#FFECEB" />
-        <SolidColorBrush x:Key="WarningBrush" Color="#A54800" />
-        <SolidColorBrush x:Key="WarningBackgroundBrush" Color="#FFF7D6" />
-        <SolidColorBrush x:Key="InfoBackgroundBrush" Color="#E9F2FF" />
+        <!-- Dark theme: colours follow Atlassian's dark theme, so the app feels at home next to Jira.
+             Near-black surfaces, near-white text; lighter surfaces sit "on top" (page < sidebar < cards). -->
+        <SolidColorBrush x:Key="ContentBrush" Color="#161A1D" />
+        <SolidColorBrush x:Key="SidebarBrush" Color="#1D2125" />
+        <SolidColorBrush x:Key="SidebarHoverBrush" Color="#2C333A" />
+        <SolidColorBrush x:Key="SidebarTextBrush" Color="#C7D1DB" />
+        <SolidColorBrush x:Key="CardBrush" Color="#22272B" />
+        <SolidColorBrush x:Key="AccentBrush" Color="#579DFF" />
+        <SolidColorBrush x:Key="AccentHoverBrush" Color="#85B8FF" />
+        <!-- Text drawn on an accent-blue fill (primary buttons, the logo): dark, since the blue is light -->
+        <SolidColorBrush x:Key="OnAccentBrush" Color="#161A1D" />
+        <SolidColorBrush x:Key="BorderBrush" Color="#38414A" />
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F1F2F4" />
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#9FADBC" />
+        <SolidColorBrush x:Key="InputBorderBrush" Color="#5C6670" />
+        <SolidColorBrush x:Key="NeutralButtonBrush" Color="#2C333A" />
+        <SolidColorBrush x:Key="NeutralButtonHoverBrush" Color="#38414A" />
+        <SolidColorBrush x:Key="SuccessBrush" Color="#7EE2B8" />
+        <SolidColorBrush x:Key="SuccessBackgroundBrush" Color="#1C3329" />
+        <SolidColorBrush x:Key="ErrorBrush" Color="#FD9891" />
+        <SolidColorBrush x:Key="ErrorBackgroundBrush" Color="#42221F" />
+        <SolidColorBrush x:Key="WarningBrush" Color="#F5CD47" />
+        <SolidColorBrush x:Key="WarningBackgroundBrush" Color="#332E1B" />
+        <SolidColorBrush x:Key="InfoBackgroundBrush" Color="#1C2B41" />
         <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
 
         <!-- Converters -->
@@ -36,6 +40,7 @@
         <conv:InverseBooleanConverter x:Key="InverseBool" />
         <conv:NullToVisibilityConverter x:Key="NullToVisibility" />
         <conv:ZeroToVisibilityConverter x:Key="ZeroToVisibility" />
+        <conv:AllTrueToVisibilityConverter x:Key="AllTrueToVisibility" />
         <conv:FormatConverter x:Key="Format" />
         <conv:IssueTypeIconConverter x:Key="TypeIcon" />
         <conv:PriorityIconConverter x:Key="PriorityIcon" />
@@ -44,7 +49,7 @@
         <conv:UpperCaseConverter x:Key="UpperCase" />
 
         <Style x:Key="PrimaryButton" TargetType="Button">
-            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Foreground" Value="{StaticResource OnAccentBrush}" />
             <Setter Property="Background" Value="{StaticResource AccentBrush}" />
             <Setter Property="Padding" Value="16,8" />
             <Setter Property="FontSize" Value="14" />
@@ -162,7 +167,51 @@
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
             <Setter Property="FontSize" Value="14" />
             <Setter Property="Padding" Value="10,8" />
+            <Setter Property="CaretBrush" Value="{StaticResource TextPrimaryBrush}" />
             <Setter Property="Template" Value="{StaticResource InputTemplate}" />
+        </Style>
+
+        <!-- Multi-line text: same look as TextInput, but the text starts at the top and scrolls -->
+        <Style x:Key="TextArea" TargetType="TextBox" BasedOn="{StaticResource TextInput}">
+            <Setter Property="AcceptsReturn" Value="True" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+            <Setter Property="SpellCheck.IsEnabled" Value="True" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1" CornerRadius="3">
+                            <ScrollViewer x:Name="PART_ContentHost" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource TextSecondaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                <Setter TargetName="Bd" Property="BorderThickness" Value="2" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Grey hint text laid over an empty input. Bind Tag to the input's text; it shows while that's empty. -->
+        <Style x:Key="Placeholder" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+            <Setter Property="IsHitTestVisible" Value="False" />
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="PasswordInput" TargetType="PasswordBox">
@@ -171,6 +220,7 @@
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
             <Setter Property="FontSize" Value="14" />
             <Setter Property="Padding" Value="10,8" />
+            <Setter Property="CaretBrush" Value="{StaticResource TextPrimaryBrush}" />
             <Setter Property="Template" Value="{StaticResource InputTemplate}" />
         </Style>
 
@@ -187,6 +237,160 @@
             <Setter Property="Margin" Value="0,5,0,0" />
             <Setter Property="TextWrapping" Value="Wrap" />
             <Setter Property="Visibility" Value="{Binding Text, RelativeSource={RelativeSource Self}, Converter={StaticResource StringToVisibility}}" />
+        </Style>
+
+        <!-- ===== Built-in controls, made dark (WPF draws these light by default) ===== -->
+
+        <!-- Slim scrollbars: a rounded thumb on an invisible track -->
+        <Style x:Key="ScrollPage" TargetType="RepeatButton">
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="IsTabStop" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Border Background="Transparent" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="ScrollThumb" TargetType="Thumb">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border x:Name="Bd" Background="#454F59" CornerRadius="4" />
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#738496" />
+                            </Trigger>
+                            <Trigger Property="IsDragging" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#8C9BAB" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="ScrollBar">
+            <!-- The thumb's minimum length is half of these, so 12,000 rows still give a thumb you can grab -->
+            <Style.Resources>
+                <sys:Double x:Key="{x:Static SystemParameters.VerticalScrollBarButtonHeightKey}">64</sys:Double>
+                <sys:Double x:Key="{x:Static SystemParameters.HorizontalScrollBarButtonWidthKey}">64</sys:Double>
+            </Style.Resources>
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Width" Value="12" />
+            <Setter Property="MinWidth" Value="12" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid Background="{TemplateBinding Background}">
+                            <Track x:Name="PART_Track" IsDirectionReversed="True" Margin="2">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Style="{StaticResource ScrollPage}" Command="ScrollBar.PageUpCommand" />
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Style="{StaticResource ScrollPage}" Command="ScrollBar.PageDownCommand" />
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource ScrollThumb}" />
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="Orientation" Value="Horizontal">
+                    <Setter Property="Width" Value="Auto" />
+                    <Setter Property="MinWidth" Value="0" />
+                    <Setter Property="Height" Value="12" />
+                    <Setter Property="MinHeight" Value="12" />
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ScrollBar">
+                                <Grid Background="{TemplateBinding Background}">
+                                    <Track x:Name="PART_Track" Margin="2">
+                                        <Track.DecreaseRepeatButton>
+                                            <RepeatButton Style="{StaticResource ScrollPage}" Command="ScrollBar.PageLeftCommand" />
+                                        </Track.DecreaseRepeatButton>
+                                        <Track.IncreaseRepeatButton>
+                                            <RepeatButton Style="{StaticResource ScrollPage}" Command="ScrollBar.PageRightCommand" />
+                                        </Track.IncreaseRepeatButton>
+                                        <Track.Thumb>
+                                            <Thumb Style="{StaticResource ScrollThumb}" />
+                                        </Track.Thumb>
+                                    </Track>
+                                </Grid>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Tooltips are light on dark, like Jira's dark theme, so they stand out from the page -->
+        <Style TargetType="ToolTip">
+            <Setter Property="Foreground" Value="#161A1D" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToolTip">
+                        <Border Background="#DEE4EA" CornerRadius="3" Padding="8,4" Margin="4">
+                            <ContentPresenter />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Right-click menus on text (Copy, Paste...) -->
+        <Style TargetType="ContextMenu">
+            <Setter Property="Background" Value="{StaticResource CardBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        </Style>
+        <Style TargetType="MenuItem">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        </Style>
+
+        <Style TargetType="ListBox">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        </Style>
+
+        <!-- "Details" toggles: a chevron that turns when open (the built-in arrow is drawn dark) -->
+        <Style TargetType="Expander">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Expander">
+                        <DockPanel>
+                            <ToggleButton DockPanel.Dock="Top" Cursor="Hand" Foreground="{TemplateBinding Foreground}"
+                                          Content="{TemplateBinding Header}"
+                                          IsChecked="{Binding IsExpanded, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <StackPanel Orientation="Horizontal" Background="Transparent">
+                                            <TextBlock x:Name="Chevron" Text="&#xE76C;" FontFamily="{StaticResource IconFont}" FontSize="9"
+                                                       VerticalAlignment="Center" Margin="0,0,6,0" />
+                                            <ContentPresenter VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="Chevron" Property="Text" Value="&#xE70D;" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <ContentPresenter x:Name="Body" Visibility="Collapsed" />
+                        </DockPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsExpanded" Value="True">
+                                <Setter TargetName="Body" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <!-- Thin rounded progress bar. WPF sizes PART_Indicator from Value automatically. -->
@@ -207,8 +411,8 @@
         </Style>
 
         <!-- ===== Data table (styled after Jira's issue list) ===== -->
-        <SolidColorBrush x:Key="GridLineBrush" Color="#EBECF0" />
-        <SolidColorBrush x:Key="RowHoverBrush" Color="#F7F8F9" />
+        <SolidColorBrush x:Key="GridLineBrush" Color="#2C333A" />
+        <SolidColorBrush x:Key="RowHoverBrush" Color="#282E33" />
 
         <!-- Virtualization settings keep only the visible rows alive, so 10,000+ issues scroll smoothly. -->
         <Style x:Key="DataTable" TargetType="DataGrid">
@@ -303,16 +507,16 @@
             <Setter Property="Padding" Value="5,1" />
             <Setter Property="HorizontalAlignment" Value="Left" />
             <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="Background" Value="#DCDFE4" />
-            <Setter Property="TextElement.Foreground" Value="#44546F" />
+            <Setter Property="Background" Value="{x:Static conv:JiraVisuals.StatusNewBackground}" />
+            <Setter Property="TextElement.Foreground" Value="{x:Static conv:JiraVisuals.StatusNewForeground}" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding StatusCategory}" Value="indeterminate">
-                    <Setter Property="Background" Value="#CCE0FF" />
-                    <Setter Property="TextElement.Foreground" Value="#0055CC" />
+                    <Setter Property="Background" Value="{x:Static conv:JiraVisuals.StatusInProgressBackground}" />
+                    <Setter Property="TextElement.Foreground" Value="{x:Static conv:JiraVisuals.StatusInProgressForeground}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding StatusCategory}" Value="done">
-                    <Setter Property="Background" Value="#BAF3DB" />
-                    <Setter Property="TextElement.Foreground" Value="#216E4E" />
+                    <Setter Property="Background" Value="{x:Static conv:JiraVisuals.StatusDoneBackground}" />
+                    <Setter Property="TextElement.Foreground" Value="{x:Static conv:JiraVisuals.StatusDoneForeground}" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -474,13 +678,13 @@
         <Style TargetType="TabItem">
             <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
             <Setter Property="FontSize" Value="14" />
-            <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TabItem">
                         <Border x:Name="Bd" Padding="2,6" Margin="0,0,20,-2" BorderThickness="0,0,0,2" BorderBrush="Transparent">
-                            <ContentPresenter ContentSource="Header" />
+                            <!-- Bold on the header only: a FontWeight on the TabItem would be inherited by the tab's content too -->
+                            <ContentPresenter ContentSource="Header" TextElement.FontWeight="SemiBold" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsSelected" Value="True">

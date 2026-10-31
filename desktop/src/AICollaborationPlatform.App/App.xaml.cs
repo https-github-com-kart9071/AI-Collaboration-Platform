@@ -102,6 +102,9 @@ public partial class App : Application
         // Browsing the local copy
         services.AddSingleton<IJiraDataQueries, JiraDataQueries>();
         services.AddSingleton<IBrowserLauncher, BrowserLauncher>();
+
+        // Changing issues in Jira from the issue panel
+        services.AddSingleton<IJiraIssueEditor, JiraIssueEditor>();
         services.AddTransient<JiraConnectionViewModel>();
 
         services.AddSingleton<MainViewModel>();

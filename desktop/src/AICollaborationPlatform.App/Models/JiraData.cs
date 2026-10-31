@@ -64,3 +64,9 @@ public sealed record JiraSprint(
     long? BoardId);
 
 public sealed record JiraField(string Id, string Name, bool Custom, string? SchemaType);
+
+/// <summary>A workflow move Jira allows from the issue's current status, e.g. "Start progress" to "In Progress".</summary>
+public sealed record JiraTransition(string Id, string Name, string ToStatus, string? ToStatusCategory);
+
+/// <summary>Field changes to send to Jira. Null leaves a field as it is; an empty description clears it.</summary>
+public sealed record JiraIssueUpdate(string? Summary = null, string? Description = null, string? Priority = null);

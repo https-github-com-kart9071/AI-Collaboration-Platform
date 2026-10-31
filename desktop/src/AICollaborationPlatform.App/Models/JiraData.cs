@@ -31,7 +31,21 @@ public sealed record JiraIssue(
     string? Description,
     IReadOnlyList<string> Labels,
     string? ParentKey,
-    JsonElement Fields);
+    JsonElement Fields,
+    IReadOnlyList<JiraComment> Comments,
+    int CommentTotal,
+    IReadOnlyList<JiraAttachment> Attachments,
+    IReadOnlyList<JiraChange> Changes)
+{
+    /// <summary>Jira includes only the first comments inline; true when the rest must be fetched separately.</summary>
+    public bool HasMoreComments => CommentTotal > Comments.Count;
+}
+
+/// <summary>Attachment details only; the file itself isn't downloaded.</summary>
+public sealed record JiraAttachment(string Id, string Filename, long Size, string? MimeType, DateTimeOffset? Created, JiraPerson? Author, string? ContentUrl);
+
+/// <summary>One field change from an issue's history (changelog).</summary>
+public sealed record JiraChange(string HistoryId, JiraPerson? Author, DateTimeOffset? Created, string Field, string? From, string? To);
 
 public sealed record JiraComment(string Id, JiraPerson? Author, string Body, DateTimeOffset? Created, DateTimeOffset? Updated);
 

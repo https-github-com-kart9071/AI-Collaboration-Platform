@@ -14,8 +14,13 @@ public interface IJiraClient
     /// <summary>
     /// Finds issues with JQL, e.g. <c>project = ABC ORDER BY updated</c>. Returns all fields unless
     /// <paramref name="fields"/> narrows them. Jira Cloud rejects unbounded JQL, so include a restriction such as a project.
+    /// Set <paramref name="includeChangelog"/> to get each issue's recent history in <see cref="JiraIssue.Changes"/>.
     /// </summary>
-    IAsyncEnumerable<JiraIssue> SearchIssuesAsync(string jql, IEnumerable<string>? fields = null, CancellationToken cancellationToken = default);
+    IAsyncEnumerable<JiraIssue> SearchIssuesAsync(
+        string jql, IEnumerable<string>? fields = null, bool includeChangelog = false, CancellationToken cancellationToken = default);
+
+    /// <summary>How many issues match <paramref name="jql"/>. Approximate on Jira Cloud.</summary>
+    Task<long> CountIssuesAsync(string jql, CancellationToken cancellationToken = default);
 
     Task<JiraIssue> GetIssueAsync(string issueKey, CancellationToken cancellationToken = default);
 

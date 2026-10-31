@@ -86,6 +86,12 @@ public partial class App : Application
             .AddHttpMessageHandler<JiraRetryHandler>()
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) });
         services.AddSingleton<IJiraClientFactory, JiraClientFactory>();
+
+        // Fetching Jira into the local SQLite database
+        services.AddSingleton(TimeProvider.System);
+        services.AddSingleton(new JiraDatabaseFactory(AppPaths.DatabaseFile));
+        services.AddSingleton<IJiraSyncService, JiraSyncService>();
+        services.AddSingleton<JiraFetchViewModel>();
         services.AddTransient<JiraConnectionViewModel>();
 
         services.AddSingleton<MainViewModel>();

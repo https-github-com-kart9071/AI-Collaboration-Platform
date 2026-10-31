@@ -14,6 +14,9 @@ internal sealed class JiraApiStub : HttpMessageHandler
 
     public List<HttpRequestMessage> Requests { get; } = [];
 
+    /// <summary>Request bodies, captured on arrival because the client disposes requests afterwards.</summary>
+    public List<string?> Bodies { get; } = [];
+
     public JiraApiStub On(string path, string json, string? queryContains = null, HttpStatusCode status = HttpStatusCode.OK)
     {
         _routes.Add((path, queryContains, () => Json(json, status)));
@@ -35,6 +38,7 @@ internal sealed class JiraApiStub : HttpMessageHandler
     {
         cancellationToken.ThrowIfCancellationRequested();
         Requests.Add(request);
+        Bodies.Add(request.Content?.ReadAsStringAsync(cancellationToken).GetAwaiter().GetResult());
 
         var path = request.RequestUri!.AbsolutePath;
         var query = Uri.UnescapeDataString(request.RequestUri.Query);

@@ -23,5 +23,8 @@ public static class AppPaths
     /// <summary>Non-secret settings. Secrets go to Windows Credential Manager, never here.</summary>
     public static string SettingsFile { get; } = Path.Combine(DataDirectory, "settings.json");
 
+    /// <summary>Local copy of the fetched Jira data (SQLite).</summary>
+    public static string DatabaseFile { get; } = Path.Combine(DataDirectory, "data.db");
+
     public static void EnsureCreated() => Directory.CreateDirectory(LogsDirectory);
 }

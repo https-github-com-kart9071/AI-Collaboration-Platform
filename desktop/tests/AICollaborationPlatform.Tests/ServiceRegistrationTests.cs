@@ -16,6 +16,7 @@ public class ServiceRegistrationTests
     {
         var services = new ServiceCollection().AddLogging();
         App.App.ConfigureServices(services);
+        services.AddSingleton(TestData.TempDatabase()); // never touch the real %APPDATA% database
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
     }
 
@@ -29,6 +30,8 @@ public class ServiceRegistrationTests
         Assert.NotNull(provider.GetRequiredService<IJiraConnectionService>());
         Assert.NotNull(provider.GetRequiredService<JiraConnectionViewModel>());
         Assert.NotNull(provider.GetRequiredService<JiraViewModel>());
+        Assert.NotNull(provider.GetRequiredService<IJiraSyncService>());
+        Assert.Same(provider.GetRequiredService<JiraViewModel>().Fetch, provider.GetRequiredService<JiraFetchViewModel>());
     }
 
     [Fact]

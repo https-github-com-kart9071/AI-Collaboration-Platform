@@ -1,4 +1,4 @@
-using AICollaborationPlatform.App.Models;
+﻿using AICollaborationPlatform.App.Models;
 using AICollaborationPlatform.App.Services;
 using AICollaborationPlatform.App.Storage;
 using AICollaborationPlatform.App.ViewModels;
@@ -19,7 +19,7 @@ public class NavigationTests
             .AddSingleton<IJiraSession>(session)
             .AddSingleton<IDialogService>(dialogs)
             .AddSingleton<HomeViewModel>()
-            .AddSingleton<JiraViewModel>()
+            .AddSingleton<JiraViewModel>(sp => TestViewModels.Jira(sp.GetRequiredService<IJiraSession>(), sp.GetRequiredService<IDialogService>()))
             .BuildServiceProvider();
 
         var navigation = new NavigationService(services, NullLogger<NavigationService>.Instance);
@@ -87,7 +87,7 @@ public class NavigationTests
             .AddSingleton<IJiraSession>(session)
             .AddSingleton<IDialogService>(dialogs)
             .AddSingleton<HomeViewModel>()
-            .AddSingleton<JiraViewModel>()
+            .AddSingleton<JiraViewModel>(sp => TestViewModels.Jira(sp.GetRequiredService<IJiraSession>(), sp.GetRequiredService<IDialogService>()))
             .BuildServiceProvider();
         var main = new MainViewModel(new NavigationService(services, NullLogger<NavigationService>.Instance), session, dialogs);
 

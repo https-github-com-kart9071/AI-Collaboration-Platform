@@ -106,6 +106,38 @@ internal sealed class FakeJiraConnectionService(Func<JiraConnectionSettings, Can
     }
 }
 
+internal sealed class FakeSyncService : IJiraSyncService
+{
+    public JiraDataSummary Summary { get; set; } = new(0, 0, 0, 0, 0, 0, null, null);
+
+    public List<JiraProject> Projects { get; } = [];
+
+    public Func<JiraSyncOptions, IProgress<JiraSyncProgress>?, CancellationToken, Task<JiraSyncResult>>? OnSync { get; set; }
+
+    public List<JiraSyncOptions> Runs { get; } = [];
+
+    public Task<IReadOnlyList<JiraProject>> GetProjectsAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<JiraProject>>(Projects);
+
+    public Task<JiraSyncResult> SyncAsync(JiraSyncOptions options, IProgress<JiraSyncProgress>? progress = null, CancellationToken cancellationToken = default)
+    {
+        Runs.Add(options);
+        return OnSync?.Invoke(options, progress, cancellationToken)
+            ?? Task.FromResult(new JiraSyncResult(JiraSyncStatus.Completed, 0, 0, 0, 0, 0, 0, TimeSpan.Zero, null, []));
+    }
+
+    public JiraDataSummary GetSummary() => Summary;
+}
+
+internal static class TestViewModels
+{
+    public static App.ViewModels.JiraFetchViewModel Fetch(IJiraSession session, IJiraSyncService? sync = null) =>
+        new(sync ?? new FakeSyncService(), session, NullLogger<App.ViewModels.JiraFetchViewModel>.Instance);
+
+    public static App.ViewModels.JiraViewModel Jira(IJiraSession session, IDialogService dialogs) =>
+        new(session, dialogs, Fetch(session));
+}
+
 internal static class TestSession
 {
     public static JiraSession Create(

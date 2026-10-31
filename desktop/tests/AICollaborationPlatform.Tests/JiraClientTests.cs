@@ -169,6 +169,75 @@ public class JiraClientTests
     }
 
     [Fact]
+    public async Task Search_can_include_changelog_attachments_and_inline_comments()
+    {
+        var stub = new JiraApiStub().On("/rest/api/3/search/jql", """
+            {"isLast":true,"issues":[{"id":"1","key":"ABC-1","fields":{"summary":"S",
+              "comment":{"total":25,"maxResults":1,"startAt":0,"comments":[{"id":"c1","body":"First","author":{"accountId":"a1","displayName":"Alex"}}]},
+              "attachment":[{"id":"att1","filename":"screen.png","size":2048,"mimeType":"image/png","created":"2024-01-01T10:00:00.000+0000",
+                             "author":{"accountId":"a1","displayName":"Alex"},"content":"https://acme.atlassian.net/rest/api/3/attachment/content/att1"}]},
+              "changelog":{"histories":[{"id":"h1","author":{"accountId":"a2","displayName":"Riya"},"created":"2024-01-03T10:00:00.000+0000",
+                "items":[{"field":"status","fromString":"To Do","toString":"In Progress"},{"field":"assignee","fromString":null,"toString":"Alex"}]}]}}]}
+            """);
+
+        var issue = Assert.Single(await CreateClient(stub, Cloud).SearchIssuesAsync("project = ABC", includeChangelog: true).CollectAsync());
+
+        Assert.Contains("expand=changelog", stub.RequestedPathsAndQueries.Single());
+        Assert.Equal("First", Assert.Single(issue.Comments).Body);
+        Assert.Equal(25, issue.CommentTotal);
+        Assert.True(issue.HasMoreComments);
+        var attachment = Assert.Single(issue.Attachments);
+        Assert.Equal(("screen.png", 2048L, "image/png"), (attachment.Filename, attachment.Size, attachment.MimeType));
+        Assert.Equal(2, issue.Changes.Count);
+        Assert.Equal(new JiraChange("h1", new JiraPerson("a2", "Riya", null, true), new DateTimeOffset(2024, 1, 3, 10, 0, 0, TimeSpan.Zero), "status", "To Do", "In Progress"), issue.Changes[0]);
+        Assert.Null(issue.Changes[1].From);
+    }
+
+    [Fact]
+    public async Task Issues_without_comments_attachments_or_changelog_have_empty_lists()
+    {
+        var stub = new JiraApiStub().On("/rest/api/3/search/jql", """{"isLast":true,"issues":[{"id":"1","key":"ABC-1","fields":{"summary":"S"}}]}""");
+
+        var issue = Assert.Single(await CreateClient(stub, Cloud).SearchIssuesAsync("project = ABC").CollectAsync());
+
+        Assert.Empty(issue.Comments);
+        Assert.False(issue.HasMoreComments);
+        Assert.Empty(issue.Attachments);
+        Assert.Empty(issue.Changes);
+        Assert.DoesNotContain("expand", stub.RequestedPathsAndQueries.Single());
+    }
+
+    [Fact]
+    public async Task Cloud_count_posts_jql_to_approximate_count()
+    {
+        var stub = new JiraApiStub().On("/rest/api/3/search/approximate-count", """{"count":1234}""");
+
+        var count = await CreateClient(stub, Cloud).CountIssuesAsync("project = ABC");
+
+        Assert.Equal(1234, count);
+        var request = stub.Requests.Single();
+        Assert.Equal(HttpMethod.Post, request.Method);
+        Assert.Equal("""{"jql":"project = ABC"}""", stub.Bodies.Single());
+    }
+
+    [Fact]
+    public async Task Server_count_reads_total_from_an_empty_search_page()
+    {
+        var stub = new JiraApiStub().On("/jira/rest/api/2/search", """{"startAt":0,"maxResults":0,"total":87,"issues":[]}""");
+
+        var count = await CreateClient(stub, Server).CountIssuesAsync("project = ABC");
+
+        Assert.Equal(87, count);
+        Assert.Contains("maxResults=0", stub.RequestedPathsAndQueries.Single());
+    }
+
+    [Fact]
+    public async Task Count_rejects_empty_jql()
+    {
+        await Assert.ThrowsAsync<ArgumentException>(() => CreateClient(new JiraApiStub(), Cloud).CountIssuesAsync(""));
+    }
+
+    [Fact]
     public async Task Search_rejects_empty_jql()
     {
         var client = CreateClient(new JiraApiStub(), Cloud);

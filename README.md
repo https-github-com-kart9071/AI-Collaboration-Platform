@@ -75,6 +75,7 @@ Logs are written to `%APPDATA%\AICollaborationPlatform\logs\`, one file per day 
 |---|---|
 | Jira URL, Cloud/Server choice, email | `%APPDATA%\AICollaborationPlatform\settings.json` (plain JSON, no secrets) |
 | Jira API token / Personal Access Token | **Windows Credential Manager**, entry `AICollaborationPlatform/Jira`, encrypted by Windows for your user account |
+| Fetched Jira data (projects, issues, comments, attachment details, history, users, boards, sprints) | `%APPDATA%\AICollaborationPlatform\data.db` (SQLite; open it with any SQLite viewer, e.g. DB Browser for SQLite) |
 
 To see or delete the token yourself, open **Control Panel → Credential Manager → Windows Credentials**. **Disconnect** in the app removes both.
 
@@ -84,7 +85,7 @@ To see or delete the token yourself, open **Control Panel → Credential Manager
 2. ✅ Jira connection dialog (URL, auth type, token, Test Connection)
 3. ✅ Store credentials securely (Windows Credential Manager)
 4. ✅ Jira API client service
-5. Fetch all Jira data into SQLite
+5. ✅ Fetch all Jira data into SQLite
 6. Browse the fetched data in the UI
 7. Export (CSV / Excel / JSON)
 8. Windows installer

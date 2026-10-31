@@ -13,10 +13,11 @@ public sealed partial class JiraViewModel : PageViewModel
     private readonly IJiraSession _session;
     private readonly IDialogService _dialogs;
 
-    public JiraViewModel(IJiraSession session, IDialogService dialogs)
+    public JiraViewModel(IJiraSession session, IDialogService dialogs, JiraFetchViewModel fetch)
     {
         _session = session;
         _dialogs = dialogs;
+        Fetch = fetch;
         _session.Changed += (_, _) =>
         {
             OnPropertyChanged(string.Empty); // every property here derives from the session
@@ -26,6 +27,9 @@ public sealed partial class JiraViewModel : PageViewModel
     }
 
     public override string Title => "Jira";
+
+    /// <summary>The "Fetch data" card, shown while connected.</summary>
+    public JiraFetchViewModel Fetch { get; }
 
     public JiraSessionState State => _session.State;
 

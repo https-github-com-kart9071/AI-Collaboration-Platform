@@ -1,4 +1,4 @@
-using AICollaborationPlatform.App.Models;
+﻿using AICollaborationPlatform.App.Models;
 using AICollaborationPlatform.App.Services;
 using AICollaborationPlatform.App.Storage;
 using AICollaborationPlatform.App.ViewModels;
@@ -13,7 +13,7 @@ public class JiraViewModelTests
     [Fact]
     public void Shows_not_connected_by_default()
     {
-        var vm = new JiraViewModel(TestSession.Create(), new FakeDialogService());
+        var vm = TestViewModels.Jira(TestSession.Create(), new FakeDialogService());
 
         Assert.True(vm.IsDisconnected);
         Assert.Equal("Not connected", vm.ConnectionStatus);
@@ -25,7 +25,7 @@ public class JiraViewModelTests
     public void Follows_session_changes()
     {
         var session = TestSession.Create();
-        var vm = new JiraViewModel(session, new FakeDialogService());
+        var vm = TestViewModels.Jira(session, new FakeDialogService());
         var changed = new List<string?>();
         vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
 
@@ -44,7 +44,7 @@ public class JiraViewModelTests
         var session = TestSession.Create();
         session.Connect(Cloud, new JiraUser("Alex Kim", null));
         var dialogs = new FakeDialogService { ConfirmAnswer = false };
-        var vm = new JiraViewModel(session, dialogs);
+        var vm = TestViewModels.Jira(session, dialogs);
 
         vm.DisconnectCommand.Execute(null);
 
@@ -57,7 +57,7 @@ public class JiraViewModelTests
     {
         var session = TestSession.Create();
         session.Connect(Cloud, new JiraUser("Alex Kim", null));
-        var vm = new JiraViewModel(session, new FakeDialogService { ConfirmAnswer = true });
+        var vm = TestViewModels.Jira(session, new FakeDialogService { ConfirmAnswer = true });
 
         vm.DisconnectCommand.Execute(null);
 
@@ -76,7 +76,7 @@ public class JiraViewModelTests
         var credentials = new InMemoryCredentialStore();
         credentials.Write(JiraSession.CredentialTarget, "alex@acme.com", "token");
         var session = TestSession.Create(service, settings, credentials);
-        var vm = new JiraViewModel(session, new FakeDialogService());
+        var vm = TestViewModels.Jira(session, new FakeDialogService());
 
         await session.RestoreAsync();
         Assert.True(vm.NeedsAttention);

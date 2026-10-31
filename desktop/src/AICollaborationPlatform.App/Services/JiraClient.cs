@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using AICollaborationPlatform.App.Models;
@@ -26,15 +27,34 @@ public sealed class JiraClient(HttpClient http, JiraConnectionSettings settings,
             ? GetOffsetPagedAsync($"{Api}/project/search", "values", MapProject, cancellationToken)
             : GetArrayAsync($"{Api}/project", MapProject, cancellationToken); // Server returns every project at once
 
-    public IAsyncEnumerable<JiraIssue> SearchIssuesAsync(string jql, IEnumerable<string>? fields = null, CancellationToken cancellationToken = default)
+    public IAsyncEnumerable<JiraIssue> SearchIssuesAsync(
+        string jql, IEnumerable<string>? fields = null, bool includeChangelog = false, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(jql);
-        var query = $"jql={Uri.EscapeDataString(jql)}&fields={Uri.EscapeDataString(string.Join(',', fields ?? ["*all"]))}";
+        var query = $"jql={Uri.EscapeDataString(jql)}&fields={Uri.EscapeDataString(string.Join(',', fields ?? ["*all"]))}"
+            + (includeChangelog ? "&expand=changelog" : "");
 
         // Cloud's search pages with a token; Server's with startAt/total.
         return IsCloud
             ? GetTokenPagedAsync($"{Api}/search/jql?{query}", "issues", MapIssue, cancellationToken)
             : GetOffsetPagedAsync($"{Api}/search?{query}", "issues", MapIssue, cancellationToken);
+    }
+
+    public async Task<long> CountIssuesAsync(string jql, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(jql);
+
+        if (IsCloud)
+        {
+            // Cloud's token-paged search has no total; this endpoint gives a quick estimate.
+            using var request = JiraAuth.CreateRequest(settings, HttpMethod.Post, $"{Api}/search/approximate-count");
+            request.Content = JsonContent.Create(new { jql });
+            using var json = await SendForJsonAsync(request, cancellationToken);
+            return JiraJson.GetLong(json.RootElement, "count") ?? 0;
+        }
+
+        using var page = await GetJsonAsync($"{Api}/search?jql={Uri.EscapeDataString(jql)}&maxResults=0", cancellationToken);
+        return JiraJson.GetLong(page.RootElement, "total") ?? 0;
     }
 
     public async Task<JiraIssue> GetIssueAsync(string issueKey, CancellationToken cancellationToken = default)
@@ -174,6 +194,11 @@ public sealed class JiraClient(HttpClient http, JiraConnectionSettings settings,
     private async Task<JsonDocument> GetJsonAsync(string pathAndQuery, CancellationToken cancellationToken)
     {
         using var request = JiraAuth.CreateRequest(settings, HttpMethod.Get, pathAndQuery);
+        return await SendForJsonAsync(request, cancellationToken);
+    }
+
+    private async Task<JsonDocument> SendForJsonAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
         using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
 
         if (!response.IsSuccessStatusCode)
@@ -250,7 +275,51 @@ public sealed class JiraClient(HttpClient http, JiraConnectionSettings settings,
             : [],
         JiraJson.GetString(issue, "fields", "parent", "key"),
         // Clone so the fields outlive the page's JsonDocument, which is disposed after paging on.
-        JiraJson.Get(issue, "fields")?.Clone() ?? default);
+        JiraJson.Get(issue, "fields")?.Clone() ?? default,
+        MapArray(issue, MapComment, "fields", "comment", "comments"),
+        (int)(JiraJson.GetLong(issue, "fields", "comment", "total") ?? 0),
+        MapArray(issue, MapAttachment, "fields", "attachment"),
+        MapChanges(issue));
+
+    private static IReadOnlyList<T> MapArray<T>(JsonElement element, Func<JsonElement, T> map, params string[] path) =>
+        JiraJson.Get(element, path) is { ValueKind: JsonValueKind.Array } array ? array.EnumerateArray().Select(map).ToList() : [];
+
+    private static JiraAttachment MapAttachment(JsonElement a) => new(
+        JiraJson.GetString(a, "id") ?? "",
+        JiraJson.GetString(a, "filename") ?? "",
+        JiraJson.GetLong(a, "size") ?? 0,
+        JiraJson.GetString(a, "mimeType"),
+        JiraJson.GetDate(a, "created"),
+        JiraJson.GetPerson(a, "author"),
+        JiraJson.GetString(a, "content"));
+
+    /// <summary>Flattens changelog.histories[].items[] into one row per changed field.</summary>
+    private static IReadOnlyList<JiraChange> MapChanges(JsonElement issue)
+    {
+        if (JiraJson.Get(issue, "changelog", "histories") is not { ValueKind: JsonValueKind.Array } histories)
+        {
+            return [];
+        }
+
+        var changes = new List<JiraChange>();
+        foreach (var history in histories.EnumerateArray())
+        {
+            var id = JiraJson.GetString(history, "id") ?? "";
+            var author = JiraJson.GetPerson(history, "author");
+            var created = JiraJson.GetDate(history, "created");
+
+            if (JiraJson.Get(history, "items") is { ValueKind: JsonValueKind.Array } items)
+            {
+                changes.AddRange(items.EnumerateArray().Select(item => new JiraChange(
+                    id, author, created,
+                    JiraJson.GetString(item, "field") ?? "",
+                    JiraJson.GetString(item, "fromString"),
+                    JiraJson.GetString(item, "toString"))));
+            }
+        }
+
+        return changes;
+    }
 
     private static JiraComment MapComment(JsonElement c) => new(
         JiraJson.GetString(c, "id") ?? "",

@@ -56,15 +56,16 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// The Home page's Jira button: go to the Jira page and, if not connected yet,
-    /// open the connection dialog straight away.
+    /// The Home page's Jira button: go to the Jira page and, if there's no connection
+    /// at all, open the connection dialog straight away. A saved connection that is
+    /// reconnecting or needs attention is handled on the Jira page instead.
     /// </summary>
     [RelayCommand]
     private void OpenJira()
     {
         _navigation.NavigateTo<JiraViewModel>();
 
-        if (!_jiraSession.IsConnected)
+        if (_jiraSession.State == JiraSessionState.Disconnected)
         {
             _dialogs.ShowJiraConnectionDialog();
         }

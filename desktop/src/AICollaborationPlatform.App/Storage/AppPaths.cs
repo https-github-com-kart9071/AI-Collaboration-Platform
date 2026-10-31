@@ -20,5 +20,8 @@ public static class AppPaths
     /// </summary>
     public static string LogFile { get; } = Path.Combine(LogsDirectory, "app.log");
 
+    /// <summary>Non-secret settings. Secrets go to Windows Credential Manager, never here.</summary>
+    public static string SettingsFile { get; } = Path.Combine(DataDirectory, "settings.json");
+
     public static void EnsureCreated() => Directory.CreateDirectory(LogsDirectory);
 }

@@ -1,6 +1,7 @@
 <UserControl x:Class="AICollaborationPlatform.App.Views.JiraView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:AICollaborationPlatform.App.Views">
     <StackPanel>
         <TextBlock Text="Jira" FontSize="26" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
 
@@ -11,26 +12,71 @@
                     <Style TargetType="Ellipse">
                         <Setter Property="Fill" Value="{StaticResource InputBorderBrush}" />
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                            <DataTrigger Binding="{Binding State}" Value="Connected">
                                 <Setter Property="Fill" Value="{StaticResource SuccessBrush}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding State}" Value="Restoring">
+                                <Setter Property="Fill" Value="{StaticResource AccentBrush}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding State}" Value="NeedsAttention">
+                                <Setter Property="Fill" Value="{StaticResource WarningBrush}" />
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </Ellipse.Style>
             </Ellipse>
             <TextBlock Margin="8,0,0,0" FontSize="14" Foreground="{StaticResource TextSecondaryBrush}"
-                       Text="{Binding ConnectionStatus}" />
+                       Text="{Binding ConnectionStatus}" AutomationProperties.LiveSetting="Polite" />
         </StackPanel>
 
         <!-- Not connected -->
         <Border Style="{StaticResource Card}" MaxWidth="520" HorizontalAlignment="Left"
-                Visibility="{Binding IsConnected, Converter={StaticResource InverseBoolToVisibility}}">
+                Visibility="{Binding IsDisconnected, Converter={StaticResource BoolToVisibility}}">
             <StackPanel>
                 <TextBlock Text="Connect to Jira" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
                 <TextBlock Margin="0,8,0,18" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"
-                           Text="Enter your Jira URL and credentials to connect. Works with Jira Cloud and Jira Server / Data Center." />
+                           Text="Enter your Jira URL and credentials to connect. Works with Jira Cloud and Jira Server / Data Center. The connection is saved securely on this PC." />
                 <Button Content="Connect…" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left"
                         Command="{Binding ConnectCommand}" AutomationProperties.Name="Connect to Jira" />
+            </StackPanel>
+        </Border>
+
+        <!-- Reconnecting to the saved connection -->
+        <Border Style="{StaticResource Card}" MaxWidth="520" HorizontalAlignment="Left"
+                Visibility="{Binding IsRestoring, Converter={StaticResource BoolToVisibility}}">
+            <StackPanel Orientation="Horizontal">
+                <local:Spinner Width="18" Height="18" VerticalAlignment="Center" />
+                <StackPanel Margin="14,0,0,0">
+                    <TextBlock Text="{Binding StatusMessage}" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}" />
+                    <TextBlock Text="{Binding ConnectedUrl}" Margin="0,2,0,0" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Saved connection needs attention -->
+        <Border Style="{StaticResource Card}" MaxWidth="520" HorizontalAlignment="Left"
+                Visibility="{Binding NeedsAttention, Converter={StaticResource BoolToVisibility}}">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE7BA;" FontFamily="{StaticResource IconFont}" FontSize="18"
+                               Foreground="{StaticResource WarningBrush}" VerticalAlignment="Center" />
+                    <TextBlock Text="Couldn't reconnect" Margin="10,0,0,0" FontSize="16" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                </StackPanel>
+                <Border Margin="0,12,0,0" Padding="12,10" CornerRadius="6" Background="{StaticResource WarningBackgroundBrush}">
+                    <TextBlock Text="{Binding StatusMessage}" FontSize="13" TextWrapping="Wrap" Foreground="{StaticResource TextPrimaryBrush}" />
+                </Border>
+                <TextBlock Margin="0,12,0,0" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" Text="Saved Jira site" />
+                <TextBlock Margin="0,2,0,18" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}"
+                           Text="{Binding ConnectedUrl}" TextTrimming="CharacterEllipsis" />
+                <WrapPanel>
+                    <Button Content="Retry" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0"
+                            Command="{Binding RetryCommand}" />
+                    <Button Content="Fix connection…" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"
+                            Command="{Binding ConnectCommand}" />
+                    <Button Content="Forget" Style="{StaticResource SecondaryButton}"
+                            Command="{Binding DisconnectCommand}" AutomationProperties.Name="Forget saved connection" />
+                </WrapPanel>
             </StackPanel>
         </Border>
 
@@ -40,8 +86,14 @@
             <StackPanel>
                 <TextBlock Text="Connected" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" />
                 <TextBlock Margin="0,8,0,0" FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" Text="Jira site" />
-                <TextBlock Margin="0,2,0,18" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}"
+                <TextBlock Margin="0,2,0,12" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}"
                            Text="{Binding ConnectedUrl}" TextTrimming="CharacterEllipsis" />
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
+                    <TextBlock Text="&#xE72E;" FontFamily="{StaticResource IconFont}" FontSize="12"
+                               Foreground="{StaticResource SuccessBrush}" VerticalAlignment="Center" />
+                    <TextBlock Margin="6,0,0,0" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"
+                               Text="Token saved securely in Windows Credential Manager" />
+                </StackPanel>
                 <StackPanel Orientation="Horizontal">
                     <Button Content="Change connection…" Style="{StaticResource SecondaryButton}"
                             Command="{Binding ConnectCommand}" />

@@ -14,4 +14,8 @@ public sealed class DialogService(IServiceProvider services) : IDialogService
         var dialog = new JiraConnectionDialog(viewModel) { Owner = Application.Current.MainWindow };
         return dialog.ShowDialog() == true;
     }
+
+    public bool Confirm(string title, string message) =>
+        MessageBox.Show(Application.Current.MainWindow!, message, title, MessageBoxButton.YesNo, MessageBoxImage.Question,
+            MessageBoxResult.No) == MessageBoxResult.Yes;
 }

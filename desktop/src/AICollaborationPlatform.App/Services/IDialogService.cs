@@ -7,4 +7,7 @@ public interface IDialogService
 {
     /// <summary>Shows the Jira connection dialog. Returns true if the user connected.</summary>
     bool ShowJiraConnectionDialog();
+
+    /// <summary>Asks a yes/no question. Returns true if the user confirmed.</summary>
+    bool Confirm(string title, string message);
 }

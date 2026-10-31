@@ -35,6 +35,7 @@ public sealed partial class MainViewModel : ObservableObject
     [
         new("Home", "", typeof(HomeViewModel)),
         new("Jira", "", typeof(JiraViewModel)),
+        new("Jira data", "", typeof(JiraDataViewModel)),
     ];
 
     public PageViewModel? CurrentPage => _navigation.CurrentPage;

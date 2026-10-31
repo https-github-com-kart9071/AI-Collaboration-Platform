@@ -1,5 +1,7 @@
-﻿using System.Net.Http;
+﻿using System.Globalization;
+using System.Net.Http;
 using System.Windows;
+using System.Windows.Markup;
 using System.Windows.Threading;
 using AICollaborationPlatform.App.Services;
 using AICollaborationPlatform.App.Storage;
@@ -19,6 +21,10 @@ public partial class App : Application
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        // WPF formats bindings as en-US unless told otherwise; use the user's Windows date/number format.
+        FrameworkElement.LanguageProperty.OverrideMetadata(typeof(FrameworkElement),
+            new FrameworkPropertyMetadata(XmlLanguage.GetLanguage(CultureInfo.CurrentCulture.IetfLanguageTag)));
 
         AppPaths.EnsureCreated();
         Log.Logger = new LoggerConfiguration()
@@ -92,6 +98,10 @@ public partial class App : Application
         services.AddSingleton(new JiraDatabaseFactory(AppPaths.DatabaseFile));
         services.AddSingleton<IJiraSyncService, JiraSyncService>();
         services.AddSingleton<JiraFetchViewModel>();
+
+        // Browsing the local copy
+        services.AddSingleton<IJiraDataQueries, JiraDataQueries>();
+        services.AddSingleton<IBrowserLauncher, BrowserLauncher>();
         services.AddTransient<JiraConnectionViewModel>();
 
         services.AddSingleton<MainViewModel>();
@@ -100,6 +110,7 @@ public partial class App : Application
         // Pages are singletons so their state survives switching between them.
         services.AddSingleton<HomeViewModel>();
         services.AddSingleton<JiraViewModel>();
+        services.AddSingleton<JiraDataViewModel>();
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

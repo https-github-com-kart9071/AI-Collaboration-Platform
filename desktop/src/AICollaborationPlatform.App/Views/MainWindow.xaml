@@ -22,11 +22,19 @@
         </Grid.RowDefinitions>
 
         <!-- Sidebar -->
-        <DockPanel Grid.Column="0" Grid.RowSpan="2" Background="{StaticResource SidebarBrush}">
-            <StackPanel DockPanel.Dock="Top" Margin="20,24,20,24">
-                <TextBlock Text="AI Collaboration" Foreground="White" FontSize="18" FontWeight="SemiBold" />
-                <TextBlock Text="Platform" Foreground="{StaticResource SidebarTextBrush}" FontSize="13" />
-            </StackPanel>
+        <Border Grid.Column="0" Grid.RowSpan="2" Background="{StaticResource SidebarBrush}"
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
+        <DockPanel>
+            <DockPanel DockPanel.Dock="Top" Margin="18,20,18,22">
+                <Border DockPanel.Dock="Left" Width="32" Height="32" CornerRadius="6" Background="{StaticResource AccentBrush}">
+                    <TextBlock Text="&#xE99A;" FontFamily="{StaticResource IconFont}" FontSize="16" Foreground="White"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="AI Collaboration" Foreground="{StaticResource TextPrimaryBrush}" FontSize="15" FontWeight="SemiBold" />
+                    <TextBlock Text="Platform" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" />
+                </StackPanel>
+            </DockPanel>
 
             <TextBlock DockPanel.Dock="Bottom" Margin="20,0,20,16" FontSize="11"
                        Foreground="{StaticResource SidebarTextBrush}" Opacity="0.7"
@@ -44,7 +52,7 @@
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="ListBoxItem">
-                                    <Border x:Name="Bd" Margin="10,2" Padding="12,10" CornerRadius="6" Background="Transparent">
+                                    <Border x:Name="Bd" Margin="10,1" Padding="12,9" CornerRadius="3" Background="Transparent">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="{Binding Glyph}" FontFamily="{StaticResource IconFont}" FontSize="16"
                                                        Foreground="{StaticResource SidebarTextBrush}" VerticalAlignment="Center" x:Name="Icon" />
@@ -57,9 +65,10 @@
                                             <Setter TargetName="Bd" Property="Background" Value="{StaticResource SidebarHoverBrush}" />
                                         </Trigger>
                                         <Trigger Property="IsSelected" Value="True">
-                                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentBrush}" />
-                                            <Setter TargetName="Icon" Property="Foreground" Value="White" />
-                                            <Setter TargetName="Label" Property="Foreground" Value="White" />
+                                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource InfoBackgroundBrush}" />
+                                            <Setter TargetName="Icon" Property="Foreground" Value="{StaticResource AccentBrush}" />
+                                            <Setter TargetName="Label" Property="Foreground" Value="{StaticResource AccentBrush}" />
+                                            <Setter TargetName="Label" Property="FontWeight" Value="SemiBold" />
                                         </Trigger>
                                         <Trigger Property="IsEnabled" Value="False">
                                             <Setter TargetName="Bd" Property="Opacity" Value="0.4" />
@@ -72,6 +81,7 @@
                 </ListBox.ItemContainerStyle>
             </ListBox>
         </DockPanel>
+        </Border>
 
         <!-- Content: the DataTemplates in App.xaml pick the view for CurrentPage -->
         <ContentControl Grid.Column="1" Grid.Row="0" Margin="32,28" Content="{Binding CurrentPage}" Focusable="False" />

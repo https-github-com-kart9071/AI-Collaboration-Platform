@@ -9,9 +9,14 @@ public static class AppPaths
 {
     public const string AppFolderName = "AICollaborationPlatform";
 
-    public static string DataDirectory { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        AppFolderName);
+    /// <summary>
+    /// %APPDATA%\AICollaborationPlatform, or the folder in the AICOLLAB_DATA_DIR environment variable
+    /// (handy for trying the app against test data without touching your real data).
+    /// </summary>
+    public static string DataDirectory { get; } =
+        Environment.GetEnvironmentVariable("AICOLLAB_DATA_DIR") is { Length: > 0 } custom
+            ? custom
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), AppFolderName);
 
     public static string LogsDirectory { get; } = Path.Combine(DataDirectory, "logs");
 

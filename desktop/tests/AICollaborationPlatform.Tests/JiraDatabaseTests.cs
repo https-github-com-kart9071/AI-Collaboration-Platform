@@ -12,7 +12,8 @@ public sealed class JiraDatabaseTests : IDisposable
     public void Dispose()
     {
         SqliteConnection.ClearAllPools();
-        Directory.Delete(Path.GetDirectoryName(_factory.Path)!, recursive: true);
+        var dir = Path.GetDirectoryName(_factory.Path)!;
+        if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
     }
 
     private static List<string> Column(JiraDatabase db, string sql)
@@ -155,6 +156,88 @@ public sealed class JiraDatabaseTests : IDisposable
         var summary = db.GetSummary();
 
         Assert.Equal(new JiraDataSummary(1, 1, 1, 2, 1, 1, Now.AddMinutes(2), "https://acme.atlassian.net"), summary);
+    }
+
+    [Fact]
+    public void Browse_lists_fetched_projects_with_issue_counts()
+    {
+        using var db = _factory.Open();
+        db.UpsertProject(TestData.Project("ABC"), Now);
+        db.UpsertProject(TestData.Project("XYZ"), Now);
+        db.UpsertProject(TestData.Project("NEVER"), Now); // listed in Jira but never fetched
+        db.MarkProjectSynced("ABC", Now, null);
+        db.SaveIssue(TestData.Issue("1", "ABC-1", "ABC"), [], Now);
+        db.SaveIssue(TestData.Issue("2", "ABC-2", "ABC"), [], Now);
+        db.SaveIssue(TestData.Issue("3", "XYZ-1", "XYZ"), [], Now); // from a cancelled fetch: still shown
+
+        var projects = db.GetProjects();
+
+        Assert.Equal([new ProjectRow("ABC", "ABC project", 2), new ProjectRow("XYZ", "XYZ project", 1)], projects);
+    }
+
+    [Fact]
+    public void Browse_issue_rows_carry_table_columns_in_local_time()
+    {
+        using var db = _factory.Open();
+        db.SaveIssue(TestData.Issue("1", "ABC-12", "ABC", summary: "Login fails", assignee: TestData.Riya), [], Now);
+
+        var row = Assert.Single(db.GetIssueRows());
+
+        Assert.Equal(("ABC-12", "ABC", "Login fails", "Task", "To Do", "new", "Riya Shah", "Medium"),
+            (row.Key, row.ProjectKey, row.Summary, row.Type, row.Status, row.StatusCategory, row.Assignee, row.Priority));
+        Assert.Equal(new DateTimeOffset(2024, 2, 1, 10, 0, 0, TimeSpan.Zero).LocalDateTime, row.Updated);
+        Assert.Equal(12, row.KeyNumber);
+    }
+
+    [Fact]
+    public void Browse_issue_detail_includes_comments_history_and_attachments()
+    {
+        using var db = _factory.Open();
+        var issue = TestData.Issue("1", "ABC-1", "ABC",
+            attachments: [new JiraAttachment("a1", "log.txt", 2048, "text/plain", Now, TestData.Alex, "https://x/a1")],
+            changes:
+            [
+                new JiraChange("h1", TestData.Riya, Now.AddDays(-2), "status", "To Do", "In Progress"),
+                new JiraChange("h2", TestData.Alex, Now.AddDays(-1), "status", "In Progress", "Done"),
+            ]);
+        db.SaveIssue(issue, [TestData.Comment("c1", "First"), TestData.Comment("c2", "Second")], Now);
+
+        var detail = db.GetIssueDetail("1")!;
+
+        Assert.Equal(("ABC-1", "Description text", "Riya Shah", "label1"), (detail.Key, detail.Description, detail.Reporter, detail.LabelsText));
+        Assert.Equal(["First", "Second"], detail.Comments.Select(c => c.Body));
+        Assert.Equal(["Done", "In Progress"], detail.Changes.Select(c => c.To)); // newest first
+        Assert.Equal("2 KB", Assert.Single(detail.Attachments).SizeText);
+        Assert.Null(db.GetIssueDetail("nope"));
+    }
+
+    [Fact]
+    public void Loading_10000_issue_rows_is_quick()
+    {
+        using var db = _factory.Open();
+        db.InTransaction(() =>
+        {
+            for (var i = 1; i <= 10_000; i++)
+            {
+                db.SaveIssue(TestData.Issue($"{i}", $"BIG-{i}", "BIG"), [], Now);
+            }
+        });
+
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        var rows = db.GetIssueRows();
+        timer.Stop();
+
+        Assert.Equal(10_000, rows.Count);
+        Assert.True(timer.ElapsedMilliseconds < 2000, $"Took {timer.ElapsedMilliseconds} ms");
+    }
+
+    [Theory]
+    [InlineData(512, "512 B")]
+    [InlineData(1536, "1.5 KB")]
+    [InlineData(5 * 1024 * 1024, "5 MB")]
+    public void Attachment_sizes_read_naturally(long size, string expected)
+    {
+        Assert.Equal(expected, new AttachmentRow("f", size, null, null, null).SizeText);
     }
 
     [Fact]

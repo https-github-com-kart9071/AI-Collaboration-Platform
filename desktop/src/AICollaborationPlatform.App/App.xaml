@@ -6,24 +6,27 @@
              xmlns:conv="clr-namespace:AICollaborationPlatform.App.Converters"
              ShutdownMode="OnMainWindowClose">
     <Application.Resources>
-        <!-- Theme -->
-        <SolidColorBrush x:Key="SidebarBrush" Color="#1F2430" />
-        <SolidColorBrush x:Key="SidebarHoverBrush" Color="#2C3342" />
-        <SolidColorBrush x:Key="SidebarTextBrush" Color="#C9CFDB" />
-        <SolidColorBrush x:Key="AccentBrush" Color="#4C6FFF" />
-        <SolidColorBrush x:Key="ContentBrush" Color="#F5F6FA" />
+        <!-- Theme: colours follow Atlassian's design system, so the app feels at home next to Jira -->
+        <SolidColorBrush x:Key="SidebarBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="SidebarHoverBrush" Color="#F1F2F4" />
+        <SolidColorBrush x:Key="SidebarTextBrush" Color="#44546F" />
+        <SolidColorBrush x:Key="AccentBrush" Color="#0C66E4" />
+        <SolidColorBrush x:Key="AccentHoverBrush" Color="#0055CC" />
+        <SolidColorBrush x:Key="ContentBrush" Color="#F7F8F9" />
         <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF" />
-        <SolidColorBrush x:Key="BorderBrush" Color="#E2E5EC" />
-        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#1B1F29" />
-        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#5E6575" />
-        <SolidColorBrush x:Key="InputBorderBrush" Color="#C9CED8" />
-        <SolidColorBrush x:Key="SuccessBrush" Color="#1E8E3E" />
-        <SolidColorBrush x:Key="SuccessBackgroundBrush" Color="#E8F5EC" />
-        <SolidColorBrush x:Key="ErrorBrush" Color="#C5221F" />
-        <SolidColorBrush x:Key="ErrorBackgroundBrush" Color="#FCE8E6" />
-        <SolidColorBrush x:Key="WarningBrush" Color="#B06000" />
-        <SolidColorBrush x:Key="WarningBackgroundBrush" Color="#FEF3E0" />
-        <SolidColorBrush x:Key="InfoBackgroundBrush" Color="#EEF1FF" />
+        <SolidColorBrush x:Key="BorderBrush" Color="#DCDFE4" />
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#172B4D" />
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#626F86" />
+        <SolidColorBrush x:Key="InputBorderBrush" Color="#B7BCC6" />
+        <SolidColorBrush x:Key="NeutralButtonBrush" Color="#F1F2F4" />
+        <SolidColorBrush x:Key="NeutralButtonHoverBrush" Color="#DCDFE4" />
+        <SolidColorBrush x:Key="SuccessBrush" Color="#216E4E" />
+        <SolidColorBrush x:Key="SuccessBackgroundBrush" Color="#DCFFF1" />
+        <SolidColorBrush x:Key="ErrorBrush" Color="#AE2E24" />
+        <SolidColorBrush x:Key="ErrorBackgroundBrush" Color="#FFECEB" />
+        <SolidColorBrush x:Key="WarningBrush" Color="#A54800" />
+        <SolidColorBrush x:Key="WarningBackgroundBrush" Color="#FFF7D6" />
+        <SolidColorBrush x:Key="InfoBackgroundBrush" Color="#E9F2FF" />
         <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
 
         <!-- Converters -->
@@ -31,26 +34,35 @@
         <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisibility" />
         <conv:StringToVisibilityConverter x:Key="StringToVisibility" />
         <conv:InverseBooleanConverter x:Key="InverseBool" />
+        <conv:NullToVisibilityConverter x:Key="NullToVisibility" />
+        <conv:ZeroToVisibilityConverter x:Key="ZeroToVisibility" />
+        <conv:FormatConverter x:Key="Format" />
+        <conv:IssueTypeIconConverter x:Key="TypeIcon" />
+        <conv:PriorityIconConverter x:Key="PriorityIcon" />
+        <conv:InitialsConverter x:Key="Initials" />
+        <conv:AvatarColorConverter x:Key="AvatarColor" />
+        <conv:UpperCaseConverter x:Key="UpperCase" />
 
         <Style x:Key="PrimaryButton" TargetType="Button">
             <Setter Property="Foreground" Value="White" />
             <Setter Property="Background" Value="{StaticResource AccentBrush}" />
-            <Setter Property="Padding" Value="18,9" />
+            <Setter Property="Padding" Value="16,8" />
             <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6"
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="3"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.88" />
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentHoverBrush}" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.75" />
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.85" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="Bd" Property="Opacity" Value="0.4" />
@@ -69,24 +81,23 @@
             <Setter Property="Padding" Value="24" />
         </Style>
 
-        <!-- White button with a border, for secondary actions next to a PrimaryButton -->
+        <!-- Grey button, like Jira's default buttons, for secondary actions next to a PrimaryButton -->
         <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
-            <Setter Property="Background" Value="{StaticResource CardBrush}" />
+            <Setter Property="Background" Value="{StaticResource NeutralButtonBrush}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6"
-                                BorderBrush="{StaticResource InputBorderBrush}" BorderThickness="1"
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="3"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource ContentBrush}" />
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource NeutralButtonHoverBrush}" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource BorderBrush}" />
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource InputBorderBrush}" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="Bd" Property="Opacity" Value="0.4" />
@@ -108,12 +119,15 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="Transparent" CornerRadius="4">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="3">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource ContentBrush}" />
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource NeutralButtonBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.4" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -125,7 +139,7 @@
              TextBox and PasswordBox apply Padding inside PART_ContentHost themselves, so it isn't repeated here. -->
         <ControlTemplate x:Key="InputTemplate" TargetType="Control">
             <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                    BorderThickness="1" CornerRadius="6">
+                    BorderThickness="1" CornerRadius="3">
                 <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center" />
             </Border>
             <ControlTemplate.Triggers>
@@ -192,6 +206,296 @@
             </Setter>
         </Style>
 
+        <!-- ===== Data table (styled after Jira's issue list) ===== -->
+        <SolidColorBrush x:Key="GridLineBrush" Color="#EBECF0" />
+        <SolidColorBrush x:Key="RowHoverBrush" Color="#F7F8F9" />
+
+        <!-- Virtualization settings keep only the visible rows alive, so 10,000+ issues scroll smoothly. -->
+        <Style x:Key="DataTable" TargetType="DataGrid">
+            <Setter Property="Background" Value="{StaticResource CardBrush}" />
+            <Setter Property="RowBackground" Value="{StaticResource CardBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="RowHeight" Value="40" />
+            <Setter Property="GridLinesVisibility" Value="Horizontal" />
+            <Setter Property="HorizontalGridLinesBrush" Value="{StaticResource GridLineBrush}" />
+            <Setter Property="HeadersVisibility" Value="Column" />
+            <Setter Property="AutoGenerateColumns" Value="False" />
+            <Setter Property="IsReadOnly" Value="True" />
+            <Setter Property="CanUserAddRows" Value="False" />
+            <Setter Property="CanUserDeleteRows" Value="False" />
+            <Setter Property="CanUserResizeRows" Value="False" />
+            <Setter Property="CanUserReorderColumns" Value="False" />
+            <Setter Property="SelectionMode" Value="Single" />
+            <Setter Property="SelectionUnit" Value="FullRow" />
+            <Setter Property="EnableRowVirtualization" Value="True" />
+            <Setter Property="EnableColumnVirtualization" Value="True" />
+            <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
+            <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
+            <Setter Property="VirtualizingPanel.ScrollUnit" Value="Pixel" />
+            <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
+        </Style>
+
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="{StaticResource CardBrush}" />
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Padding" Value="10,9" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,0,2" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{StaticResource NeutralButtonBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="DataGridRow">
+            <Setter Property="Cursor" Value="Hand" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{StaticResource RowHoverBrush}" />
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="{StaticResource InfoBackgroundBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="DataGridCell">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridCell">
+                        <Border Background="Transparent" Padding="10,0">
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                    <Setter Property="Background" Value="Transparent" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="CellText" TargetType="TextBlock">
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <Style x:Key="CellSubtleText" TargetType="TextBlock" BasedOn="{StaticResource CellText}">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+        </Style>
+
+        <!-- Jira's status lozenge: small, bold, upper-case, coloured by status category (new / indeterminate / done).
+             TextElement.Foreground flows down to the TextBlock inside. -->
+        <Style x:Key="StatusPill" TargetType="Border">
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Padding" Value="5,1" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Background" Value="#DCDFE4" />
+            <Setter Property="TextElement.Foreground" Value="#44546F" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding StatusCategory}" Value="indeterminate">
+                    <Setter Property="Background" Value="#CCE0FF" />
+                    <Setter Property="TextElement.Foreground" Value="#0055CC" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding StatusCategory}" Value="done">
+                    <Setter Property="Background" Value="#BAF3DB" />
+                    <Setter Property="TextElement.Foreground" Value="#216E4E" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="StatusPillText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+
+        <!-- Small reusable Jira visuals. Each template's DataContext is a plain string (type, priority or name);
+             bind Content with TargetNullValue='' so a missing value still reaches the template as "". -->
+        <DataTemplate x:Key="IssueTypeIconTemplate">
+            <Border Width="16" Height="16" CornerRadius="3" Background="{Binding Converter={StaticResource TypeIcon}}"
+                    ToolTip="{Binding}" AutomationProperties.Name="{Binding}">
+                <Path Data="{Binding Converter={StaticResource TypeIcon}, ConverterParameter=shape}" Fill="White" />
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="PriorityIconTemplate">
+            <Path Width="16" Height="16" Data="{Binding Converter={StaticResource PriorityIcon}, ConverterParameter=shape}"
+                  Stroke="{Binding Converter={StaticResource PriorityIcon}}" StrokeThickness="1.8"
+                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
+        </DataTemplate>
+
+        <!-- Round avatar with initials; a grey person icon when unassigned -->
+        <DataTemplate x:Key="AvatarTemplate">
+            <Grid Width="24" Height="24">
+                <Ellipse Fill="{Binding Converter={StaticResource AvatarColor}}" />
+                <TextBlock x:Name="Letters" Text="{Binding Converter={StaticResource Initials}}" Foreground="White" FontSize="10"
+                           FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <TextBlock x:Name="Person" Text="&#xE77B;" FontFamily="{StaticResource IconFont}" FontSize="12" Foreground="White"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
+            </Grid>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding}" Value="">
+                    <Setter TargetName="Person" Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <!-- Square project avatar with the project key's first letter -->
+        <DataTemplate x:Key="ProjectAvatarTemplate">
+            <Border Width="24" Height="24" CornerRadius="4" Background="{Binding Converter={StaticResource AvatarColor}}">
+                <Grid>
+                    <TextBlock x:Name="Letter" Text="{Binding Converter={StaticResource Initials}}" Foreground="White" FontSize="12"
+                               FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <TextBlock x:Name="All" Text="&#xE8A9;" FontFamily="{StaticResource IconFont}" FontSize="12" Foreground="White"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
+                </Grid>
+            </Border>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding}" Value="">
+                    <Setter TargetName="All" Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <!-- Filter drop-down drawn like Jira's filter buttons: grey when showing everything, blue once a filter is picked.
+             PART_Popup is the name WPF looks for, so keyboard and screen-reader support keep working. -->
+        <Style x:Key="FilterCombo" TargetType="ComboBox">
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Padding" Value="10,0,30,0" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="DisplayMemberPath" Value="Label" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Background" Value="{StaticResource InfoBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+            <Setter Property="MaxDropDownHeight" Value="360" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="3" />
+                            <!-- Shows the picked option's Label (the items are FilterOption records) -->
+                            <TextBlock Margin="{TemplateBinding Padding}" VerticalAlignment="Center" IsHitTestVisible="False"
+                                       Text="{Binding SelectedItem.Label, RelativeSource={RelativeSource TemplatedParent}}"
+                                       Foreground="{TemplateBinding Foreground}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="&#xE70D;" FontFamily="{StaticResource IconFont}" FontSize="10" Margin="0,1,11,0"
+                                       HorizontalAlignment="Right" VerticalAlignment="Center" IsHitTestVisible="False"
+                                       Foreground="{TemplateBinding Foreground}" />
+                            <ToggleButton Focusable="False" ClickMode="Press"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border Background="Transparent" />
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <Popup x:Name="PART_Popup" IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom"
+                                   AllowsTransparency="True" Focusable="False" PopupAnimation="Fade">
+                                <Border Margin="0,4,12,12" Background="{StaticResource CardBrush}" CornerRadius="4"
+                                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                        MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+                                        MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="12" ShadowDepth="3" Opacity="0.2" Direction="270" />
+                                    </Border.Effect>
+                                    <ScrollViewer Margin="0,4" VerticalScrollBarVisibility="Auto">
+                                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.8" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                <Setter TargetName="Bd" Property="BorderThickness" Value="2" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <!-- "All …" is selected: neutral grey -->
+                <DataTrigger Binding="{Binding SelectedItem.Value, RelativeSource={RelativeSource Self}}" Value="{x:Null}">
+                    <Setter Property="Background" Value="{StaticResource NeutralButtonBrush}" />
+                    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="Bd" Background="Transparent" BorderThickness="2,0,0,0" BorderBrush="Transparent" Padding="12,7">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource NeutralButtonBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource InfoBackgroundBrush}" />
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Flat tabs with an accent underline -->
+        <Style x:Key="FlatTabs" TargetType="TabControl">
+            <Setter Property="BorderThickness" Value="0,2,0,0" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
+            <Setter Property="Padding" Value="0,14,0,0" />
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+
+        <Style TargetType="TabItem">
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="Bd" Padding="2,6" Margin="0,0,20,-2" BorderThickness="0,0,0,2" BorderBrush="Transparent">
+                            <ContentPresenter ContentSource="Header" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Radio buttons drawn as one half of a two-option segmented switch -->
         <Style x:Key="SegmentRadio" TargetType="RadioButton">
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
@@ -201,7 +505,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
                         <Border x:Name="Bd" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource InputBorderBrush}"
-                                BorderThickness="1" CornerRadius="6" Padding="10,8">
+                                BorderThickness="1" CornerRadius="3" Padding="10,8">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
@@ -230,6 +534,9 @@
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:JiraViewModel}">
             <views:JiraView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:JiraDataViewModel}">
+            <views:JiraDataView />
         </DataTemplate>
     </Application.Resources>
 </Application>

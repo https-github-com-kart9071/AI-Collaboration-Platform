@@ -252,6 +252,90 @@ public sealed class JiraDatabase : IDisposable
 
     public long Count(string table) => Scalar<long>($"SELECT COUNT(*) FROM {table}");
 
+    // ---- Browsing ----
+
+    public IReadOnlyList<ProjectRow> GetProjects()
+    {
+        using var command = CreateCommand("""
+            SELECT p.key, p.name, (SELECT COUNT(*) FROM issues i WHERE i.project_key = p.key)
+            FROM projects p
+            WHERE p.last_synced_at IS NOT NULL OR EXISTS (SELECT 1 FROM issues i WHERE i.project_key = p.key)
+            ORDER BY p.key
+            """);
+        using var reader = command.ExecuteReader();
+        var projects = new List<ProjectRow>();
+        while (reader.Read())
+        {
+            projects.Add(new ProjectRow(reader.GetString(0), reader.GetString(1), reader.GetInt32(2)));
+        }
+
+        return projects;
+    }
+
+    /// <summary>Every issue, with only the columns the table needs. One query, read straight into a list.</summary>
+    public IReadOnlyList<IssueRow> GetIssueRows()
+    {
+        using var command = CreateCommand("""
+            SELECT id, key, project_key, summary, issue_type, status, status_category, assignee_name, priority, created, updated
+            FROM issues
+            """);
+        using var reader = command.ExecuteReader();
+        var rows = new List<IssueRow>();
+        while (reader.Read())
+        {
+            rows.Add(new IssueRow(
+                reader.GetString(0), reader.GetString(1), Text(reader, 2), reader.GetString(3), Text(reader, 4),
+                Text(reader, 5), Text(reader, 6), Text(reader, 7), Text(reader, 8), LocalDate(reader, 9), LocalDate(reader, 10)));
+        }
+
+        return rows;
+    }
+
+    public IssueDetail? GetIssueDetail(string issueId)
+    {
+        using var command = CreateCommand("""
+            SELECT key, summary, issue_type, status, status_category, priority, assignee_name, reporter_name,
+                   created, updated, resolution_date, labels, parent_key, description
+            FROM issues WHERE id = $id
+            """, ("$id", issueId));
+        using var reader = command.ExecuteReader();
+        if (!reader.Read())
+        {
+            return null;
+        }
+
+        var labels = Text(reader, 11) is { } json ? JsonSerializer.Deserialize<List<string>>(json) ?? [] : [];
+
+        return new IssueDetail(
+            issueId, reader.GetString(0), reader.GetString(1), Text(reader, 2), Text(reader, 3), Text(reader, 4),
+            Text(reader, 5), Text(reader, 6), Text(reader, 7), LocalDate(reader, 8), LocalDate(reader, 9), LocalDate(reader, 10),
+            labels, Text(reader, 12), Text(reader, 13),
+            Read("SELECT author_name, created, body FROM comments WHERE issue_id = $id ORDER BY created",
+                r => new CommentRow(Text(r, 0), LocalDate(r, 1), r.GetString(2)), issueId),
+            Read("SELECT created, author_name, field, from_value, to_value FROM changelog WHERE issue_id = $id ORDER BY created DESC, id",
+                r => new ChangeRow(LocalDate(r, 0), Text(r, 1), r.GetString(2), Text(r, 3), Text(r, 4)), issueId),
+            Read("SELECT filename, size, author_name, created, content_url FROM attachments WHERE issue_id = $id ORDER BY created",
+                r => new AttachmentRow(r.GetString(0), r.GetInt64(1), Text(r, 2), LocalDate(r, 3), Text(r, 4)), issueId));
+    }
+
+    private List<T> Read<T>(string sql, Func<SqliteDataReader, T> map, string issueId)
+    {
+        using var command = CreateCommand(sql, ("$id", issueId));
+        using var reader = command.ExecuteReader();
+        var items = new List<T>();
+        while (reader.Read())
+        {
+            items.Add(map(reader));
+        }
+
+        return items;
+    }
+
+    private static string? Text(SqliteDataReader reader, int ordinal) => reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);
+
+    private static DateTime? LocalDate(SqliteDataReader reader, int ordinal) =>
+        reader.IsDBNull(ordinal) ? null : ParseDate(reader.GetString(ordinal)).LocalDateTime;
+
     // ---- Plumbing ----
 
     private void EnsureSchema()

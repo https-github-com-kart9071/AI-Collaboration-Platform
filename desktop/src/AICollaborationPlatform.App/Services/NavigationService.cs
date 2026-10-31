@@ -31,5 +31,6 @@ public sealed class NavigationService(IServiceProvider services, ILogger<Navigat
         CurrentPage = (PageViewModel)services.GetRequiredService(pageViewModelType);
         logger.LogInformation("Navigated to {Page}", CurrentPage.Title);
         CurrentPageChanged?.Invoke(this, EventArgs.Empty);
+        _ = CurrentPage.OnNavigatedToAsync();
     }
 }

@@ -31,6 +31,7 @@ public class ServiceRegistrationTests
         Assert.NotNull(provider.GetRequiredService<JiraConnectionViewModel>());
         Assert.NotNull(provider.GetRequiredService<JiraViewModel>());
         Assert.NotNull(provider.GetRequiredService<IJiraSyncService>());
+        Assert.NotNull(provider.GetRequiredService<JiraDataViewModel>());
         Assert.Same(provider.GetRequiredService<JiraViewModel>().Fetch, provider.GetRequiredService<JiraFetchViewModel>());
     }
 

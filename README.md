@@ -79,6 +79,23 @@ Logs are written to `%APPDATA%\AICollaborationPlatform\logs\`, one file per day 
 
 To see or delete the token yourself, open **Control Panel → Credential Manager → Windows Credentials**. **Disconnect** in the app removes both.
 
+To try the app against other data (for example a test database) without touching your own, set `AICOLLAB_DATA_DIR` to another folder before starting it. Settings, logs and `data.db` are then read from and written to that folder:
+
+```powershell
+$env:AICOLLAB_DATA_DIR = "C:\temp\aicollab-test"; dotnet run --project src/AICollaborationPlatform.App
+```
+
+### Browsing Jira data
+
+The **Jira data** page in the sidebar works offline from `data.db`:
+
+- **Projects** on the left, **issues** in a table on the right (Key, Summary, Type, Status, Assignee, Priority, Created, Updated)
+- Click a column header to sort, click again to reverse; keys sort naturally (KAN-9 before KAN-10)
+- Filter by status, assignee and type; search key or summary (**Ctrl+F** jumps to the search box)
+- Double-click an issue (or press **Enter**) for its description, comments, history and attachments; **Esc** closes it
+- **Open in Jira** opens the issue in your browser
+- The table is virtualized, so 10,000+ issues scroll and filter smoothly
+
 ## Roadmap
 
 1. ✅ Project setup and app shell
@@ -86,7 +103,7 @@ To see or delete the token yourself, open **Control Panel → Credential Manager
 3. ✅ Store credentials securely (Windows Credential Manager)
 4. ✅ Jira API client service
 5. ✅ Fetch all Jira data into SQLite
-6. Browse the fetched data in the UI
+6. ✅ Browse the fetched data in the UI
 7. Export (CSV / Excel / JSON)
 8. Windows installer
 9. AI insights (Python backend)

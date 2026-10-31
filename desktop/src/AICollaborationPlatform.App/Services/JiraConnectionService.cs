@@ -1,8 +1,6 @@
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Security.Authentication;
-using System.Text;
 using System.Text.Json;
 using AICollaborationPlatform.App.Models;
 using Microsoft.Extensions.Logging;
@@ -13,14 +11,7 @@ public sealed class JiraConnectionService(HttpClient http, ILogger<JiraConnectio
 {
     public async Task<JiraConnectionResult> TestConnectionAsync(JiraConnectionSettings settings, CancellationToken cancellationToken = default)
     {
-        var apiVersion = settings.AuthType == JiraAuthType.Cloud ? 3 : 2;
-        var url = new Uri($"{settings.BaseUrl.AbsoluteUri.TrimEnd('/')}/rest/api/{apiVersion}/myself");
-
-        using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        request.Headers.Authorization = settings.AuthType == JiraAuthType.Cloud
-            ? new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{settings.Email}:{settings.Token}")))
-            : new AuthenticationHeaderValue("Bearer", settings.Token);
+        using var request = JiraAuth.CreateRequest(settings, HttpMethod.Get, $"rest/api/{JiraAuth.ApiVersion(settings)}/myself");
 
         logger.LogInformation("Testing Jira connection: {Settings}", settings);
 

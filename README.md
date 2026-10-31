@@ -83,7 +83,7 @@ To see or delete the token yourself, open **Control Panel → Credential Manager
 1. ✅ Project setup and app shell
 2. ✅ Jira connection dialog (URL, auth type, token, Test Connection)
 3. ✅ Store credentials securely (Windows Credential Manager)
-4. Jira API client service
+4. ✅ Jira API client service
 5. Fetch all Jira data into SQLite
 6. Browse the fetched data in the UI
 7. Export (CSV / Excel / JSON)

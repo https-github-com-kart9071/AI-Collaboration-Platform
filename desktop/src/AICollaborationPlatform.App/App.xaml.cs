@@ -54,7 +54,8 @@ public partial class App : Application
         _ = _host.Services.GetRequiredService<IJiraSession>().RestoreAsync();
     }
 
-    private static void ConfigureServices(IServiceCollection services)
+    // Internal so tests can build the real container and check every registration resolves.
+    internal static void ConfigureServices(IServiceCollection services)
     {
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IDialogService, DialogService>();
@@ -74,6 +75,17 @@ public partial class App : Application
             // recycling pooled connections keeps it picking up DNS changes.
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) });
         services.AddSingleton<IJiraSession, JiraSession>();
+
+        // Jira data API: retries rate limits and server errors. The timeout covers all retries of one call.
+        services.AddTransient<JiraRetryHandler>();
+        services.AddHttpClient(JiraClient.HttpClientName, client =>
+            {
+                client.Timeout = TimeSpan.FromMinutes(3);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("AICollaborationPlatform/0.1");
+            })
+            .AddHttpMessageHandler<JiraRetryHandler>()
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) });
+        services.AddSingleton<IJiraClientFactory, JiraClientFactory>();
         services.AddTransient<JiraConnectionViewModel>();
 
         services.AddSingleton<MainViewModel>();

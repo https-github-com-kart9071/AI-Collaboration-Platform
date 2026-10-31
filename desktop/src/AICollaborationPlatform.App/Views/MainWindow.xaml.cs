@@ -9,6 +9,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = viewModel;
+        DarkTitleBar.Apply(this);
 
         // Open at most of the screen: the data table needs the room. Never larger than the screen itself.
         var area = SystemParameters.WorkArea;

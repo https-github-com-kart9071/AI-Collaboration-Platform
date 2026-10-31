@@ -107,6 +107,30 @@ public static partial class JiraJson
         return BlankLines().Replace(text.ToString(), "\n\n").Trim();
     }
 
+    /// <summary>
+    /// Plain text as an Atlassian Document Format document, for Cloud: blank lines start a new paragraph,
+    /// single line breaks stay line breaks. ADF doesn't allow empty text nodes, so none are written.
+    /// </summary>
+    public static object TextToAdf(string text)
+    {
+        var paragraphs = ParagraphBreak().Split(text.Replace("\r\n", "\n").Trim())
+            .Where(p => p.Length > 0)
+            .Select(paragraph =>
+            {
+                var inline = new List<object>();
+                var lines = paragraph.Split('\n');
+                for (var i = 0; i < lines.Length; i++)
+                {
+                    if (i > 0) inline.Add(new { type = "hardBreak" });
+                    if (lines[i].Length > 0) inline.Add(new { type = "text", text = lines[i] });
+                }
+
+                return new { type = "paragraph", content = inline };
+            });
+
+        return new { type = "doc", version = 1, content = paragraphs.ToList() };
+    }
+
     private static readonly HashSet<string> AdfBlockNodes =
         ["paragraph", "heading", "blockquote", "codeBlock", "listItem", "rule", "panel", "tableRow", "mediaSingle"];
 
@@ -159,4 +183,7 @@ public static partial class JiraJson
 
     [GeneratedRegex(@"\n{3,}")]
     private static partial Regex BlankLines();
+
+    [GeneratedRegex(@"\n[ \t]*\n\s*")]
+    private static partial Regex ParagraphBreak();
 }

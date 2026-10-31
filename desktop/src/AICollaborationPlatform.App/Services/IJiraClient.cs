@@ -19,9 +19,16 @@ public interface IJiraClient
     IAsyncEnumerable<JiraIssue> SearchIssuesAsync(
         string jql, IEnumerable<string>? fields = null, bool includeChangelog = false, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Just the IDs of the issues matching <paramref name="jql"/>: a quick way to see which issues still exist
+    /// (Jira Cloud returns up to 5,000 per page when only IDs are asked for).
+    /// </summary>
+    IAsyncEnumerable<string> GetIssueIdsAsync(string jql, CancellationToken cancellationToken = default);
+
     /// <summary>How many issues match <paramref name="jql"/>. Approximate on Jira Cloud.</summary>
     Task<long> CountIssuesAsync(string jql, CancellationToken cancellationToken = default);
 
+    /// <summary>One issue with all fields and its recent history.</summary>
     Task<JiraIssue> GetIssueAsync(string issueKey, CancellationToken cancellationToken = default);
 
     IAsyncEnumerable<JiraComment> GetCommentsAsync(string issueKey, CancellationToken cancellationToken = default);
@@ -36,4 +43,28 @@ public interface IJiraClient
     IAsyncEnumerable<JiraSprint> GetSprintsAsync(long boardId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<JiraField>> GetFieldsAsync(CancellationToken cancellationToken = default);
+
+    // ---- Changes. These are never retried automatically, so a comment can't be posted twice. ----
+
+    /// <summary>Adds a plain-text comment. Line breaks are kept.</summary>
+    Task<JiraComment> AddCommentAsync(string issueKey, string body, CancellationToken cancellationToken = default);
+
+    /// <summary>The status changes the workflow allows from where the issue is now.</summary>
+    Task<IReadOnlyList<JiraTransition>> GetTransitionsAsync(string issueKey, CancellationToken cancellationToken = default);
+
+    Task TransitionIssueAsync(string issueKey, string transitionId, CancellationToken cancellationToken = default);
+
+    Task UpdateIssueAsync(string issueKey, JiraIssueUpdate update, CancellationToken cancellationToken = default);
+
+    /// <summary>Assigns the issue; null unassigns it. Use an id from <see cref="GetAssignableUsersAsync"/>.</summary>
+    Task AssignIssueAsync(string issueKey, string? assigneeId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// People who can be assigned the issue, matching <paramref name="query"/> (name or email; empty for the first 50).
+    /// Their <see cref="JiraPerson.Id"/> is what <see cref="AssignIssueAsync"/> expects: the accountId on Cloud, the username on Server.
+    /// </summary>
+    Task<IReadOnlyList<JiraPerson>> GetAssignableUsersAsync(string issueKey, string? query = null, CancellationToken cancellationToken = default);
+
+    /// <summary>Priority names, highest first.</summary>
+    Task<IReadOnlyList<string>> GetPrioritiesAsync(CancellationToken cancellationToken = default);
 }

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
 
@@ -33,6 +34,22 @@ public static class JiraVisuals
             .Select(Freeze).ToArray();
 
     public static readonly Brush UnassignedColor = Freeze("#8590A2");
+
+    // Status lozenges (dark theme), by Jira status category: "new" (To Do), "indeterminate" (In Progress), "done".
+    // The StatusPill style in App.xaml uses these too, so the table and the issue panel always match.
+    public static readonly Brush StatusNewBackground = Freeze("#38414A");
+    public static readonly Brush StatusNewForeground = Freeze("#C7D1DB");
+    public static readonly Brush StatusInProgressBackground = Freeze("#09326C");
+    public static readonly Brush StatusInProgressForeground = Freeze("#85B8FF");
+    public static readonly Brush StatusDoneBackground = Freeze("#164B35");
+    public static readonly Brush StatusDoneForeground = Freeze("#7EE2B8");
+
+    public static (Brush Background, Brush Foreground) ForStatus(string? category) => category switch
+    {
+        "indeterminate" => (StatusInProgressBackground, StatusInProgressForeground),
+        "done" => (StatusDoneBackground, StatusDoneForeground),
+        _ => (StatusNewBackground, StatusNewForeground),
+    };
 
     public static Icon ForIssueType(string? type)
     {
@@ -75,6 +92,64 @@ public static class JiraVisuals
         var hash = 0;
         foreach (var c in name) hash = unchecked(hash * 31 + c);
         return AvatarColors[(hash & int.MaxValue) % AvatarColors.Length];
+    }
+
+    // ---- Icons as ready-drawn images, for the issue table ----
+    // An Image of a frozen drawing costs almost nothing to lay out, while a Path (especially a stroked one)
+    // recomputes its geometry bounds every time a recycled row shows a new issue. One image per icon, shared by all rows.
+
+    private static readonly Dictionary<Icon, ImageSource> TypeImages = [];
+    private static readonly Dictionary<Icon, ImageSource?> PriorityImages = [];
+
+    /// <summary>The issue type icon (white shape on a coloured rounded square) as a 16×16 image.</summary>
+    public static ImageSource TypeImage(string? type)
+    {
+        var icon = ForIssueType(type);
+        lock (TypeImages)
+        {
+            if (!TypeImages.TryGetValue(icon, out var image))
+            {
+                var drawing = new DrawingGroup();
+                drawing.Children.Add(new GeometryDrawing(icon.Color, null, new RectangleGeometry(new Rect(0, 0, 16, 16), 3, 3)));
+                drawing.Children.Add(new GeometryDrawing(Brushes.White, null, icon.Shape));
+                TypeImages[icon] = image = Freeze(new DrawingImage(drawing));
+            }
+
+            return image;
+        }
+    }
+
+    /// <summary>The priority arrow as a 16×16 image; null when there's no priority.</summary>
+    public static ImageSource? PriorityImage(string? priority)
+    {
+        var icon = ForPriority(priority);
+        lock (PriorityImages)
+        {
+            if (!PriorityImages.TryGetValue(icon, out var image))
+            {
+                image = icon.Shape is null ? null : Freeze(new DrawingImage(new DrawingGroup
+                {
+                    Children =
+                    {
+                        // An invisible 16×16 box keeps every arrow in the same place, whatever its own size.
+                        new GeometryDrawing(Brushes.Transparent, null, new RectangleGeometry(new Rect(0, 0, 16, 16))),
+                        new GeometryDrawing(null, new Pen(icon.Color, 1.8)
+                        {
+                            StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round, LineJoin = PenLineJoin.Round,
+                        }, icon.Shape),
+                    },
+                }));
+                PriorityImages[icon] = image;
+            }
+
+            return image;
+        }
+    }
+
+    private static ImageSource Freeze(DrawingImage image)
+    {
+        image.Freeze();
+        return image;
     }
 
     private static Icon Make(string path, string color)

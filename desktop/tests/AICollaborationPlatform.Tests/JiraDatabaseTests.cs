@@ -205,7 +205,7 @@ public sealed class JiraDatabaseTests : IDisposable
         var detail = db.GetIssueDetail("1")!;
 
         Assert.Equal(("ABC-1", "Description text", "Riya Shah", "label1"), (detail.Key, detail.Description, detail.Reporter, detail.LabelsText));
-        Assert.Equal(["First", "Second"], detail.Comments.Select(c => c.Body));
+        Assert.Equal(["Second", "First"], detail.Comments.Select(c => c.Body)); // newest first, under the new-comment box
         Assert.Equal(["Done", "In Progress"], detail.Changes.Select(c => c.To)); // newest first
         Assert.Equal("2 KB", Assert.Single(detail.Attachments).SizeText);
         Assert.Null(db.GetIssueDetail("nope"));

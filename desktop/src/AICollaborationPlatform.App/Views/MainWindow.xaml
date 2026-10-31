@@ -27,7 +27,7 @@
         <DockPanel>
             <DockPanel DockPanel.Dock="Top" Margin="18,20,18,22">
                 <Border DockPanel.Dock="Left" Width="32" Height="32" CornerRadius="6" Background="{StaticResource AccentBrush}">
-                    <TextBlock Text="&#xE99A;" FontFamily="{StaticResource IconFont}" FontSize="16" Foreground="White"
+                    <TextBlock Text="&#xE99A;" FontFamily="{StaticResource IconFont}" FontSize="16" Foreground="{StaticResource OnAccentBrush}"
                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
                 <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">

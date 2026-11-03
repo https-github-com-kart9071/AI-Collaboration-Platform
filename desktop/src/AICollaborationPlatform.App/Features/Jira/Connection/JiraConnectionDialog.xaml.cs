@@ -2,9 +2,9 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Navigation;
-using AICollaborationPlatform.App.ViewModels;
+using AICollaborationPlatform.App.UI;
 
-namespace AICollaborationPlatform.App.Views;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 public partial class JiraConnectionDialog : Window
 {

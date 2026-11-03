@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http;
-using AICollaborationPlatform.App.Services;
+using AICollaborationPlatform.App.Features.Jira;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AICollaborationPlatform.Tests;

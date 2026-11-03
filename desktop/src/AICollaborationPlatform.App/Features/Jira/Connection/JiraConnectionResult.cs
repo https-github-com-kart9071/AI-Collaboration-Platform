@@ -1,4 +1,4 @@
-namespace AICollaborationPlatform.App.Models;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 public enum JiraConnectionError
 {

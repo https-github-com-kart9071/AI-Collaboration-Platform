@@ -1,10 +1,11 @@
 using System.Reflection;
-using AICollaborationPlatform.App.Models;
-using AICollaborationPlatform.App.Services;
+using AICollaborationPlatform.App.Core;
+using AICollaborationPlatform.App.Features.Code;
+using AICollaborationPlatform.App.Features.Jira;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-namespace AICollaborationPlatform.App.ViewModels;
+namespace AICollaborationPlatform.App.Shell;
 
 public sealed partial class MainViewModel : ObservableObject
 {
@@ -36,6 +37,7 @@ public sealed partial class MainViewModel : ObservableObject
         new("Home", "", typeof(HomeViewModel)),
         new("Jira", "", typeof(JiraViewModel)),
         new("Jira data", "", typeof(JiraDataViewModel)),
+        new("Code", "", typeof(CodeViewModel)),
     ];
 
     public PageViewModel? CurrentPage => _navigation.CurrentPage;

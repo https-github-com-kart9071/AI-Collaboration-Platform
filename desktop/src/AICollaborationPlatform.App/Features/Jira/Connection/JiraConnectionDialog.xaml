@@ -1,12 +1,12 @@
-<Window x:Class="AICollaborationPlatform.App.Views.JiraConnectionDialog"
+<Window x:Class="AICollaborationPlatform.App.Features.Jira.JiraConnectionDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:vm="clr-namespace:AICollaborationPlatform.App.ViewModels"
-        xmlns:local="clr-namespace:AICollaborationPlatform.App.Views"
+        xmlns:jira="clr-namespace:AICollaborationPlatform.App.Features.Jira"
+        xmlns:ui="clr-namespace:AICollaborationPlatform.App.UI"
         mc:Ignorable="d"
-        d:DataContext="{d:DesignInstance Type=vm:JiraConnectionViewModel}"
+        d:DataContext="{d:DesignInstance Type=jira:JiraConnectionViewModel}"
         Title="Connect to Jira"
         Width="500" SizeToContent="Height"
         ResizeMode="NoResize" ShowInTaskbar="False"
@@ -150,9 +150,9 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- Spinner while working -->
-                    <local:Spinner Grid.Column="0" Margin="0,1,10,0" VerticalAlignment="Top">
-                        <local:Spinner.Style>
-                            <Style TargetType="local:Spinner">
+                    <ui:Spinner Grid.Column="0" Margin="0,1,10,0" VerticalAlignment="Top">
+                        <ui:Spinner.Style>
+                            <Style TargetType="ui:Spinner">
                                 <Setter Property="Visibility" Value="Collapsed" />
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding StatusKind}" Value="Working">
@@ -160,8 +160,8 @@
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
-                        </local:Spinner.Style>
-                    </local:Spinner>
+                        </ui:Spinner.Style>
+                    </ui:Spinner>
 
                     <!-- Icon for success / error -->
                     <TextBlock Grid.Column="0" FontFamily="{StaticResource IconFont}" FontSize="16" Margin="0,1,10,0"

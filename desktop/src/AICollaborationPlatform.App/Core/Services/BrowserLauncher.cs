@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace AICollaborationPlatform.App.Services;
+namespace AICollaborationPlatform.App.Core;
 
 public interface IBrowserLauncher
 {

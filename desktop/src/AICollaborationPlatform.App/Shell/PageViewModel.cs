@@ -1,6 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace AICollaborationPlatform.App.ViewModels;
+namespace AICollaborationPlatform.App.Shell;
 
 /// <summary>
 /// Base class for anything shown in the main content area.

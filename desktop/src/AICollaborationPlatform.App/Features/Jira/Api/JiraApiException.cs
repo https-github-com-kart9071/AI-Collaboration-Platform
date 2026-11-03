@@ -1,6 +1,6 @@
 using System.Net;
 
-namespace AICollaborationPlatform.App.Services;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 /// <summary>Jira answered with an error, even after retries.</summary>
 public sealed class JiraApiException(HttpStatusCode statusCode, string message, IReadOnlyList<string> jiraErrors)

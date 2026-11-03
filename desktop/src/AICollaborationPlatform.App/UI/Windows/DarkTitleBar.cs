@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
 
-namespace AICollaborationPlatform.App.Views;
+namespace AICollaborationPlatform.App.UI;
 
 /// <summary>
 /// Asks Windows to draw a window's title bar dark, to match the app's dark theme.

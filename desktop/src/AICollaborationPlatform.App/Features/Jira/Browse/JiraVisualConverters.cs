@@ -3,7 +3,7 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
 
-namespace AICollaborationPlatform.App.Converters;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 /// <summary>
 /// Jira-style visuals: issue type icons, priority arrows and avatar colours.

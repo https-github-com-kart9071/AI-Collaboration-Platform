@@ -1,9 +1,9 @@
-using AICollaborationPlatform.App.Models;
-using AICollaborationPlatform.App.Services;
+using AICollaborationPlatform.App.Core;
+using AICollaborationPlatform.App.Shell;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-namespace AICollaborationPlatform.App.ViewModels;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 /// <summary>
 /// Jira page: shows the current or saved connection and lets the user connect, retry or forget it.

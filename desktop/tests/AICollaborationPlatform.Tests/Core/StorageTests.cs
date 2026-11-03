@@ -1,6 +1,6 @@
 using System.IO;
-using AICollaborationPlatform.App.Models;
-using AICollaborationPlatform.App.Storage;
+using AICollaborationPlatform.App.Core;
+using AICollaborationPlatform.App.Features.Jira;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AICollaborationPlatform.Tests;

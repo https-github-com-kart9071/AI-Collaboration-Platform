@@ -1,4 +1,4 @@
-namespace AICollaborationPlatform.App.Storage;
+namespace AICollaborationPlatform.App.Core;
 
 public interface ISettingsStore
 {

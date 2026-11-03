@@ -1,8 +1,7 @@
 using System.Net.Http;
-using AICollaborationPlatform.App.Models;
 using Microsoft.Extensions.Logging;
 
-namespace AICollaborationPlatform.App.Services;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 public interface IJiraClientFactory
 {

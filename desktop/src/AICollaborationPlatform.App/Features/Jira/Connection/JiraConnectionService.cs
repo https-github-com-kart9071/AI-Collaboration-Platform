@@ -2,10 +2,9 @@ using System.Net;
 using System.Net.Http;
 using System.Security.Authentication;
 using System.Text.Json;
-using AICollaborationPlatform.App.Models;
 using Microsoft.Extensions.Logging;
 
-namespace AICollaborationPlatform.App.Services;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 public sealed class JiraConnectionService(HttpClient http, ILogger<JiraConnectionService> logger) : IJiraConnectionService
 {

@@ -1,4 +1,4 @@
-namespace AICollaborationPlatform.App.Services;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 /// <param name="ProjectKeys">Projects to fetch; null or empty means all.</param>
 /// <param name="JqlFilter">Optional extra JQL, e.g. <c>updated &gt;= -30d</c>, combined with each project.</param>
@@ -36,4 +36,5 @@ public sealed record JiraSyncResult(
     int IssuesRemoved,
     TimeSpan Duration,
     string? Error,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> Warnings,
+    int ProjectsRemoved = 0);

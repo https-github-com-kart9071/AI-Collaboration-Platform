@@ -2,9 +2,7 @@ using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using AICollaborationPlatform.App.Models;
-using AICollaborationPlatform.App.Services;
-using AICollaborationPlatform.App.Storage;
+using AICollaborationPlatform.App.Features.Jira;
 
 namespace AICollaborationPlatform.Tests;
 

@@ -1,6 +1,4 @@
-using AICollaborationPlatform.App.Models;
-using AICollaborationPlatform.App.Services;
-using AICollaborationPlatform.App.ViewModels;
+using AICollaborationPlatform.App.Features.Jira;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AICollaborationPlatform.Tests;

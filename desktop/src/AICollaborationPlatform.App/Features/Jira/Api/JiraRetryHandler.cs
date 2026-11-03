@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http;
 using Microsoft.Extensions.Logging;
 
-namespace AICollaborationPlatform.App.Services;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 /// <summary>
 /// Retries Jira requests that failed for temporary reasons: rate limiting (429), server errors (5xx)

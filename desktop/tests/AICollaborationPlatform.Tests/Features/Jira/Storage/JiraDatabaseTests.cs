@@ -1,5 +1,4 @@
-using AICollaborationPlatform.App.Models;
-using AICollaborationPlatform.App.Storage;
+using AICollaborationPlatform.App.Features.Jira;
 using Microsoft.Data.Sqlite;
 
 namespace AICollaborationPlatform.Tests;

@@ -1,4 +1,4 @@
-namespace AICollaborationPlatform.App.ViewModels;
+namespace AICollaborationPlatform.App.Shell;
 
 public sealed class HomeViewModel : PageViewModel
 {

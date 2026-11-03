@@ -1,10 +1,9 @@
 using System.Globalization;
 using System.IO;
 using System.Text.Json;
-using AICollaborationPlatform.App.Models;
 using Microsoft.Data.Sqlite;
 
-namespace AICollaborationPlatform.App.Storage;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 /// <summary>Totals shown on the Jira page.</summary>
 public sealed record JiraDataSummary(
@@ -186,6 +185,40 @@ public sealed class JiraDatabase : IDisposable
         var deleted = Execute("DELETE FROM issues WHERE project_key = $project AND id NOT IN (SELECT id FROM keep_ids)", ("$project", projectKey));
         Execute("DELETE FROM keep_ids");
         return deleted;
+    }
+
+    /// <summary>
+    /// Removes projects Jira no longer lists (deleted, or no longer visible to this account) with their issues,
+    /// boards and sprints. Returns the keys removed.
+    /// </summary>
+    public IReadOnlyList<string> DeleteProjectsNotIn(IReadOnlyCollection<string> keepProjectKeys)
+    {
+        var keep = new HashSet<string>(keepProjectKeys, StringComparer.OrdinalIgnoreCase);
+        var gone = new List<string>();
+        using (var command = CreateCommand("""
+            SELECT key FROM projects
+            UNION SELECT DISTINCT project_key FROM issues WHERE project_key IS NOT NULL
+            UNION SELECT DISTINCT project_key FROM boards WHERE project_key IS NOT NULL
+            """))
+        using (var reader = command.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                if (!keep.Contains(reader.GetString(0))) gone.Add(reader.GetString(0));
+            }
+        }
+
+        foreach (var key in gone)
+        {
+            Execute("""
+                DELETE FROM issues WHERE project_key = $key;
+                DELETE FROM sprints WHERE board_id IN (SELECT id FROM boards WHERE project_key = $key);
+                DELETE FROM boards WHERE project_key = $key;
+                DELETE FROM projects WHERE key = $key;
+                """, ("$key", key));
+        }
+
+        return gone;
     }
 
     public void UpsertBoard(JiraBoard board) => Execute("""

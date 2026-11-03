@@ -1,4 +1,4 @@
-namespace AICollaborationPlatform.App.Services;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 /// <summary>
 /// Turns whatever the user pasted into a clean Jira base URL.

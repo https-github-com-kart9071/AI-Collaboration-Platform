@@ -1,5 +1,5 @@
 using System.IO;
-using AICollaborationPlatform.App.Storage;
+using AICollaborationPlatform.App.Core;
 
 namespace AICollaborationPlatform.Tests;
 

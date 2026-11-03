@@ -1,8 +1,7 @@
-using AICollaborationPlatform.App.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace AICollaborationPlatform.App.Services;
+namespace AICollaborationPlatform.App.Shell;
 
 /// <summary>
 /// Resolves page view models from the DI container. The matching view is picked

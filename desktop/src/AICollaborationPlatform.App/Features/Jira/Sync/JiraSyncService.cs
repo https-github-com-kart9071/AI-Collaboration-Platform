@@ -1,11 +1,9 @@
 using System.IO;
 using System.Net;
 using System.Net.Http;
-using AICollaborationPlatform.App.Models;
-using AICollaborationPlatform.App.Storage;
 using Microsoft.Extensions.Logging;
 
-namespace AICollaborationPlatform.App.Services;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 public interface IJiraSyncService
 {
@@ -114,7 +112,17 @@ public sealed class JiraSyncService(
             progress?.Report(new JiraSyncProgress(JiraSyncPhase.Projects, 0, 0, null, 0, null));
             var allProjects = await CollectAsync(client.GetProjectsAsync(cancellationToken));
             db.InTransaction(() => allProjects.ForEach(p => db.UpsertProject(p, startedAt)));
-            var projects = SelectProjects(allProjects, options.ProjectKeys, run.Warnings);
+
+            // Drop projects (spaces) that were deleted in Jira, so they stop showing in the app.
+            IReadOnlyList<string> removed = [];
+            db.InTransaction(() => removed = db.DeleteProjectsNotIn(allProjects.Select(p => p.Key).ToList()));
+            if (removed.Count > 0)
+            {
+                run.ProjectsRemoved = removed.Count;
+                logger.LogInformation("Removed projects no longer in Jira: {Projects}", string.Join(",", removed));
+            }
+
+            var projects = SelectProjects(allProjects, options.ProjectKeys, removed, run.Warnings);
 
             progress?.Report(new JiraSyncProgress(JiraSyncPhase.Users, 0, projects.Count, null, 0, null));
             await SyncUsersAsync(client, db, run, cancellationToken);
@@ -144,7 +152,7 @@ public sealed class JiraSyncService(
             status, run.Projects, run.Issues, run.Comments, duration);
 
         return new JiraSyncResult(status, run.Projects, run.Issues, run.Comments, run.Boards, run.Sprints, run.IssuesRemoved,
-            duration, error, run.Warnings);
+            duration, error, run.Warnings, run.ProjectsRemoved);
     }
 
     private async Task SyncProjectAsync(
@@ -315,7 +323,9 @@ public sealed class JiraSyncService(
         return jql + " ORDER BY updated ASC";
     }
 
-    private static List<JiraProject> SelectProjects(List<JiraProject> all, IReadOnlyList<string>? keys, List<string> warnings)
+    /// <summary>The projects asked for, or all of them. Keys just removed as deleted are skipped without a warning.</summary>
+    private static List<JiraProject> SelectProjects(
+        List<JiraProject> all, IReadOnlyList<string>? keys, IReadOnlyList<string> removed, List<string> warnings)
     {
         if (keys is not { Count: > 0 })
         {
@@ -324,7 +334,8 @@ public sealed class JiraSyncService(
 
         var wanted = new HashSet<string>(keys, StringComparer.OrdinalIgnoreCase);
         var selected = all.Where(p => wanted.Contains(p.Key)).ToList();
-        var missing = wanted.Except(selected.Select(p => p.Key), StringComparer.OrdinalIgnoreCase).ToList();
+        var missing = wanted.Except(selected.Select(p => p.Key), StringComparer.OrdinalIgnoreCase)
+            .Except(removed, StringComparer.OrdinalIgnoreCase).ToList();
         if (missing.Count > 0)
         {
             warnings.Add($"Not found in Jira (skipped): {string.Join(", ", missing)}");
@@ -355,6 +366,7 @@ public sealed class JiraSyncService(
         public int Boards;
         public int Sprints;
         public int IssuesRemoved;
+        public int ProjectsRemoved;
         public readonly List<string> Warnings = [];
     }
 }

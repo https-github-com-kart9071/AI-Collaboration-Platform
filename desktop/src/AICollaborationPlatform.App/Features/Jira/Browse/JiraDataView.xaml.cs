@@ -3,10 +3,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using AICollaborationPlatform.App.Models;
-using AICollaborationPlatform.App.ViewModels;
 
-namespace AICollaborationPlatform.App.Views;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 /// <summary>
 /// The view model does the sorting (fast, on plain lists); this code-behind only turns header clicks,

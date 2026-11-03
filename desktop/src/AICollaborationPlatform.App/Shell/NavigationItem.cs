@@ -1,4 +1,4 @@
-namespace AICollaborationPlatform.App.Models;
+namespace AICollaborationPlatform.App.Shell;
 
 /// <summary>
 /// One entry in the sidebar. <see cref="Glyph"/> is a Segoe Fluent Icons code point.

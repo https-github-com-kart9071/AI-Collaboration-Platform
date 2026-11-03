@@ -1,4 +1,4 @@
-using AICollaborationPlatform.App.Views;
+using AICollaborationPlatform.App.UI;
 
 namespace AICollaborationPlatform.Tests;
 

@@ -1,5 +1,5 @@
-using AICollaborationPlatform.App.Models;
-using AICollaborationPlatform.App.ViewModels;
+using AICollaborationPlatform.App;
+using AICollaborationPlatform.App.Features.Jira;
 
 namespace AICollaborationPlatform.Tests;
 
@@ -7,7 +7,7 @@ public class JiraConnectionViewModelTests
 {
     private static readonly JiraUser Alex = new("Alex Kim", "alex@acme.com");
 
-    private static JiraConnectionViewModel CreateFilledCloud(FakeJiraConnectionService service, App.Services.IJiraSession? session = null) =>
+    private static JiraConnectionViewModel CreateFilledCloud(FakeJiraConnectionService service, IJiraSession? session = null) =>
         new(service, session ?? TestSession.Create())
         {
             Url = "https://acme.atlassian.net/browse/ABC-1",

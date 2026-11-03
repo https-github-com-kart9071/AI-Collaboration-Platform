@@ -1,4 +1,5 @@
-using AICollaborationPlatform.App.Converters;
+using AICollaborationPlatform.App;
+using AICollaborationPlatform.App.Features.Jira;
 
 namespace AICollaborationPlatform.Tests;
 
@@ -68,7 +69,7 @@ public class JiraVisualsTests
     [Fact]
     public void IssueRow_HasItsCellVisualsReady()
     {
-        var row = new App.Models.IssueRow("1", "KAN-1", "KAN", "Login fails", "Bug", "In Progress", "indeterminate",
+        var row = new IssueRow("1", "KAN-1", "KAN", "Login fails", "Bug", "In Progress", "indeterminate",
             "Karthik Akala", "High", null, null);
 
         Assert.Equal("IN PROGRESS", row.StatusText);
@@ -85,7 +86,7 @@ public class JiraVisualsTests
     [Fact]
     public void IssueRow_UnassignedGetsTheGreyPersonIcon()
     {
-        var row = new App.Models.IssueRow("1", "KAN-1", "KAN", "Login fails", null, null, null, null, null, null, null);
+        var row = new IssueRow("1", "KAN-1", "KAN", "Login fails", null, null, null, null, null, null, null);
 
         Assert.True(row.IsUnassigned);
         Assert.Equal("", row.AssigneeInitials);
@@ -98,7 +99,7 @@ public class JiraVisualsTests
     public void IssueRow_EqualityIgnoresTheVisuals()
     {
         // The table keeps its selection by comparing rows, so the computed visuals mustn't affect equality.
-        var a = new App.Models.IssueRow("1", "KAN-1", "KAN", "S", "Bug", "To Do", "new", "Alex", "High", null, null);
+        var a = new IssueRow("1", "KAN-1", "KAN", "S", "Bug", "To Do", "new", "Alex", "High", null, null);
         var b = a with { };
 
         Assert.Equal(a, b);

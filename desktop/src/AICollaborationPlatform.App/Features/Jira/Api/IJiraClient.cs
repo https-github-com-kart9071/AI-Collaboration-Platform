@@ -1,6 +1,4 @@
-using AICollaborationPlatform.App.Models;
-
-namespace AICollaborationPlatform.App.Services;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 /// <summary>
 /// Reads data from one Jira connection. Lists are streamed page by page as <see cref="IAsyncEnumerable{T}"/>,

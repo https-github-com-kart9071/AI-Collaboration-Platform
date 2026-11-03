@@ -1,4 +1,4 @@
-namespace AICollaborationPlatform.App.Storage;
+namespace AICollaborationPlatform.App.Core;
 
 /// <summary>
 /// Stores secrets (tokens) outside the app's files, protected by the OS for the current Windows user.

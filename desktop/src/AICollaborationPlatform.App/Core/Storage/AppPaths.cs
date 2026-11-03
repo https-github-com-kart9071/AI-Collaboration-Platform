@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace AICollaborationPlatform.App.Storage;
+namespace AICollaborationPlatform.App.Core;
 
 /// <summary>
 /// Well-known locations for per-user app data under %APPDATA%\AICollaborationPlatform.

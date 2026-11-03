@@ -1,11 +1,9 @@
 using System.Collections.ObjectModel;
-using AICollaborationPlatform.App.Models;
-using AICollaborationPlatform.App.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 
-namespace AICollaborationPlatform.App.ViewModels;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 public enum FetchResultKind
 {

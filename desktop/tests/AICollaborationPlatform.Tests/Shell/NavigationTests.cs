@@ -1,7 +1,7 @@
-﻿using AICollaborationPlatform.App.Models;
-using AICollaborationPlatform.App.Services;
-using AICollaborationPlatform.App.Storage;
-using AICollaborationPlatform.App.ViewModels;
+﻿using AICollaborationPlatform.App.Core;
+using AICollaborationPlatform.App.Features.Code;
+using AICollaborationPlatform.App.Features.Jira;
+using AICollaborationPlatform.App.Shell;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -20,6 +20,7 @@ public class NavigationTests
             .AddSingleton<IDialogService>(dialogs)
             .AddSingleton<HomeViewModel>()
             .AddSingleton<JiraViewModel>(sp => TestViewModels.Jira(sp.GetRequiredService<IJiraSession>(), sp.GetRequiredService<IDialogService>()))
+            .AddSingleton<CodeViewModel>()
             .BuildServiceProvider();
 
         var navigation = new NavigationService(services, NullLogger<NavigationService>.Instance);
@@ -107,6 +108,19 @@ public class NavigationTests
 
         Assert.IsType<JiraViewModel>(sut.Main.CurrentPage);
         Assert.Equal(0, sut.Dialogs.JiraDialogShownCount);
+    }
+
+    [Fact]
+    public void Sidebar_has_a_code_page_after_the_jira_pages()
+    {
+        var sut = CreateSut();
+
+        sut.Main.SelectedItem = sut.Main.NavigationItems.Last();
+
+        Assert.Equal(["Home", "Jira", "Jira data", "Code"], sut.Main.NavigationItems.Select(i => i.Title));
+        Assert.IsType<CodeViewModel>(sut.Main.CurrentPage);
+        Assert.Equal("Code", sut.Main.SelectedItem?.Title);
+        Assert.Equal(0, sut.Dialogs.CodeDialogShownCount); // opening the page doesn't pop up the dialog
     }
 
     [Fact]

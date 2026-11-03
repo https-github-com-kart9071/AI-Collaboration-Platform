@@ -3,7 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 
-namespace AICollaborationPlatform.App.Views;
+namespace AICollaborationPlatform.App.UI;
 
 /// <summary>
 /// Smooth mouse-wheel and touchpad scrolling. WPF jumps a fixed distance for every wheel message, however small;

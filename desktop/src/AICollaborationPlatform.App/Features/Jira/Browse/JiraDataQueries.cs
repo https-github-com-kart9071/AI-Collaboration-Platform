@@ -1,8 +1,6 @@
 using System.IO;
-using AICollaborationPlatform.App.Models;
-using AICollaborationPlatform.App.Storage;
 
-namespace AICollaborationPlatform.App.Services;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 /// <summary>Everything the data browser shows at once.</summary>
 public sealed record JiraDataSnapshot(string? Site, IReadOnlyList<ProjectRow> Projects, IReadOnlyList<IssueRow> Issues)

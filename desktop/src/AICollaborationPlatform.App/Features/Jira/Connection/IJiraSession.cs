@@ -1,6 +1,4 @@
-using AICollaborationPlatform.App.Models;
-
-namespace AICollaborationPlatform.App.Services;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 /// <summary>
 /// The Jira connection the app is using. A connection is saved when connecting

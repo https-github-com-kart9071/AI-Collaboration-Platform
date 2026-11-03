@@ -1,14 +1,12 @@
-using AICollaborationPlatform.App.Models;
+using AICollaborationPlatform.App.Features.Jira;
 
-namespace AICollaborationPlatform.App.Storage;
+namespace AICollaborationPlatform.App.Core;
 
 /// <summary>
 /// Everything saved in settings.json. Never put secrets here.
+/// Each feature owns the type of its own section (e.g. <see cref="SavedJiraConnection"/>); this record only gathers them.
 /// </summary>
 public sealed record AppSettings
 {
     public SavedJiraConnection? Jira { get; init; }
 }
-
-/// <summary>The non-secret half of a Jira connection. The token lives in <see cref="ICredentialStore"/>.</summary>
-public sealed record SavedJiraConnection(string BaseUrl, JiraAuthType AuthType, string? Email);

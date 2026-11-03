@@ -1,6 +1,5 @@
-using AICollaborationPlatform.App.Models;
-using AICollaborationPlatform.App.Services;
-using AICollaborationPlatform.App.Storage;
+using AICollaborationPlatform.App.Core;
+using AICollaborationPlatform.App.Features.Jira;
 
 namespace AICollaborationPlatform.Tests;
 

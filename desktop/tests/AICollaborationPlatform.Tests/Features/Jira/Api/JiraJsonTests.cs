@@ -1,5 +1,5 @@
 using System.Text.Json;
-using AICollaborationPlatform.App.Services;
+using AICollaborationPlatform.App.Features.Jira;
 
 namespace AICollaborationPlatform.Tests;
 

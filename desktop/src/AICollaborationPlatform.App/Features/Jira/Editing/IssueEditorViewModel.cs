@@ -1,10 +1,8 @@
-using AICollaborationPlatform.App.Models;
-using AICollaborationPlatform.App.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 
-namespace AICollaborationPlatform.App.ViewModels;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 /// <summary>A status choice. <see cref="Value"/> null keeps the current status (same shape as <see cref="FilterOption"/>, so the drop-down style fits).</summary>
 public sealed record StatusChoice(string Label, JiraTransition? Value);

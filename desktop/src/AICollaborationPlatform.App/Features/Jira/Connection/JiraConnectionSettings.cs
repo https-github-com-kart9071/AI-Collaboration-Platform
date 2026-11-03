@@ -1,4 +1,4 @@
-namespace AICollaborationPlatform.App.Models;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 /// <summary>
 /// Everything needed to call a Jira instance. <see cref="Email"/> is only used for Cloud.

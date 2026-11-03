@@ -1,6 +1,4 @@
-using AICollaborationPlatform.App.ViewModels;
-
-namespace AICollaborationPlatform.App.Services;
+namespace AICollaborationPlatform.App.Shell;
 
 public interface INavigationService
 {

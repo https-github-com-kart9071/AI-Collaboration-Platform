@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 
-namespace AICollaborationPlatform.App.Converters;
+namespace AICollaborationPlatform.App.UI;
 
 /// <summary>Visible when the bound bool is false.</summary>
 public sealed class InverseBooleanToVisibilityConverter : IValueConverter

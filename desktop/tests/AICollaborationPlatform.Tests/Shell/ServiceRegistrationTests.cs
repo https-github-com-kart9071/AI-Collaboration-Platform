@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Http;
-using AICollaborationPlatform.App.Models;
-using AICollaborationPlatform.App.Services;
-using AICollaborationPlatform.App.ViewModels;
+using AICollaborationPlatform.App;
+using AICollaborationPlatform.App.Features.Code;
+using AICollaborationPlatform.App.Features.Jira;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
@@ -32,6 +32,7 @@ public class ServiceRegistrationTests
         Assert.NotNull(provider.GetRequiredService<JiraViewModel>());
         Assert.NotNull(provider.GetRequiredService<IJiraSyncService>());
         Assert.NotNull(provider.GetRequiredService<JiraDataViewModel>());
+        Assert.NotNull(provider.GetRequiredService<CodeViewModel>());
         Assert.Same(provider.GetRequiredService<JiraViewModel>().Fetch, provider.GetRequiredService<JiraFetchViewModel>());
     }
 

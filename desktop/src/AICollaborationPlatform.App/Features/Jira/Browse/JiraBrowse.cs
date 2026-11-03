@@ -1,8 +1,7 @@
 using System.Globalization;
 using System.Windows.Media;
-using AICollaborationPlatform.App.Converters;
 
-namespace AICollaborationPlatform.App.Models;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 // Read models for browsing the local copy of Jira data. Dates are already converted to local time for display.
 

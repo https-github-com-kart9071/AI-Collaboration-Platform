@@ -1,7 +1,7 @@
 using System.Windows;
-using AICollaborationPlatform.App.ViewModels;
+using AICollaborationPlatform.App.UI;
 
-namespace AICollaborationPlatform.App.Views;
+namespace AICollaborationPlatform.App.Shell;
 
 public partial class MainWindow : Window
 {

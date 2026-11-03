@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace AICollaborationPlatform.App.Models;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 // Jira data returned by IJiraClient. Shapes are the same for Cloud and Server;
 // the client smooths over their differences (account IDs vs user keys, rich-text vs plain descriptions).

@@ -2,9 +2,8 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using AICollaborationPlatform.App.Models;
 
-namespace AICollaborationPlatform.App.Services;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 /// <summary>
 /// Helpers for reading Jira's JSON, which has optional fields everywhere

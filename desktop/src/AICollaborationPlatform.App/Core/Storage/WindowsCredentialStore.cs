@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using FILETIME = System.Runtime.InteropServices.ComTypes.FILETIME;
 
-namespace AICollaborationPlatform.App.Storage;
+namespace AICollaborationPlatform.App.Core;
 
 /// <summary>
 /// Windows Credential Manager ("Control Panel → Credential Manager → Windows Credentials").

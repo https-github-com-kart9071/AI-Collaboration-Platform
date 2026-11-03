@@ -1,8 +1,7 @@
-using AICollaborationPlatform.App.Models;
-using AICollaborationPlatform.App.Storage;
+using AICollaborationPlatform.App.Core;
 using Microsoft.Extensions.Logging;
 
-namespace AICollaborationPlatform.App.Services;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 public sealed class JiraSession(
     IJiraConnectionService connectionService,

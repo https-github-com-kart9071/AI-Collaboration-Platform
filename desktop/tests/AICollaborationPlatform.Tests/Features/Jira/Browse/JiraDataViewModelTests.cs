@@ -1,7 +1,7 @@
 using System.Diagnostics;
-using AICollaborationPlatform.App.Models;
-using AICollaborationPlatform.App.Services;
-using AICollaborationPlatform.App.ViewModels;
+using AICollaborationPlatform.App.Core;
+using AICollaborationPlatform.App.Features.Jira;
+using AICollaborationPlatform.App.Shell;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AICollaborationPlatform.Tests;

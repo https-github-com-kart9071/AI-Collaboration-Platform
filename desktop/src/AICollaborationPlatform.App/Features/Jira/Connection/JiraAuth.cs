@@ -1,9 +1,8 @@
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
-using AICollaborationPlatform.App.Models;
 
-namespace AICollaborationPlatform.App.Services;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 /// <summary>Builds authenticated Jira requests: Cloud uses Basic (email:token), Server uses Bearer (PAT).</summary>
 public static class JiraAuth

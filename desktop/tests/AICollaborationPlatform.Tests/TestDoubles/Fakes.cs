@@ -1,8 +1,9 @@
 using System.Net;
 using System.Net.Http;
-using AICollaborationPlatform.App.Models;
-using AICollaborationPlatform.App.Services;
-using AICollaborationPlatform.App.Storage;
+using AICollaborationPlatform.App;
+using AICollaborationPlatform.App.Core;
+using AICollaborationPlatform.App.Features.Jira;
+using AICollaborationPlatform.App.Shell;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AICollaborationPlatform.Tests;
@@ -11,6 +12,8 @@ internal sealed class FakeDialogService : IDialogService
 {
     public int JiraDialogShownCount { get; private set; }
 
+    public int CodeDialogShownCount { get; private set; }
+
     public bool ConfirmAnswer { get; set; } = true;
 
     public int ConfirmCount { get; private set; }
@@ -18,6 +21,12 @@ internal sealed class FakeDialogService : IDialogService
     public bool ShowJiraConnectionDialog()
     {
         JiraDialogShownCount++;
+        return false;
+    }
+
+    public bool ShowCodeConnectionDialog()
+    {
+        CodeDialogShownCount++;
         return false;
     }
 
@@ -131,10 +140,10 @@ internal sealed class FakeSyncService : IJiraSyncService
 
 internal static class TestViewModels
 {
-    public static App.ViewModels.JiraFetchViewModel Fetch(IJiraSession session, IJiraSyncService? sync = null) =>
-        new(sync ?? new FakeSyncService(), session, NullLogger<App.ViewModels.JiraFetchViewModel>.Instance);
+    public static JiraFetchViewModel Fetch(IJiraSession session, IJiraSyncService? sync = null) =>
+        new(sync ?? new FakeSyncService(), session, NullLogger<JiraFetchViewModel>.Instance);
 
-    public static App.ViewModels.JiraViewModel Jira(IJiraSession session, IDialogService dialogs) =>
+    public static JiraViewModel Jira(IJiraSession session, IDialogService dialogs) =>
         new(session, dialogs, Fetch(session));
 }
 

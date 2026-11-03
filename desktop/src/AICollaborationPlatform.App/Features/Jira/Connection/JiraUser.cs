@@ -1,4 +1,4 @@
-namespace AICollaborationPlatform.App.Models;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 /// <summary>
 /// The account the credentials belong to, from Jira's /myself endpoint.

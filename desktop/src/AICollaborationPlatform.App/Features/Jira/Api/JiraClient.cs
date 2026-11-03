@@ -3,10 +3,9 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
-using AICollaborationPlatform.App.Models;
 using Microsoft.Extensions.Logging;
 
-namespace AICollaborationPlatform.App.Services;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 /// <summary>
 /// Jira REST client for one connection. Cloud uses REST API v3, Server / Data Center v2;

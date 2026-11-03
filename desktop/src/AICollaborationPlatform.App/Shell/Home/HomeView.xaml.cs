@@ -1,6 +1,6 @@
 using System.Windows.Controls;
 
-namespace AICollaborationPlatform.App.Views;
+namespace AICollaborationPlatform.App.Shell;
 
 public partial class HomeView : UserControl
 {

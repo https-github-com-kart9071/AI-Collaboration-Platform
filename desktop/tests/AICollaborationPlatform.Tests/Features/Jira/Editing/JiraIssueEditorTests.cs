@@ -1,8 +1,6 @@
 using System.Net;
 using System.Net.Http;
-using AICollaborationPlatform.App.Models;
-using AICollaborationPlatform.App.Services;
-using AICollaborationPlatform.App.Storage;
+using AICollaborationPlatform.App.Features.Jira;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 

@@ -1,6 +1,4 @@
-using AICollaborationPlatform.App.Models;
-
-namespace AICollaborationPlatform.App.Services;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 public interface IJiraConnectionService
 {

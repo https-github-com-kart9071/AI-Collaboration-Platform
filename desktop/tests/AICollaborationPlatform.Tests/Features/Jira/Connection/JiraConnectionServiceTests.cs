@@ -2,8 +2,7 @@ using System.Net;
 using System.Net.Http;
 using System.Security.Authentication;
 using System.Text;
-using AICollaborationPlatform.App.Models;
-using AICollaborationPlatform.App.Services;
+using AICollaborationPlatform.App.Features.Jira;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AICollaborationPlatform.Tests;

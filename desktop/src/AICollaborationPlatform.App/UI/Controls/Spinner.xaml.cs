@@ -1,6 +1,6 @@
 using System.Windows.Controls;
 
-namespace AICollaborationPlatform.App.Views;
+namespace AICollaborationPlatform.App.UI;
 
 public partial class Spinner : UserControl
 {

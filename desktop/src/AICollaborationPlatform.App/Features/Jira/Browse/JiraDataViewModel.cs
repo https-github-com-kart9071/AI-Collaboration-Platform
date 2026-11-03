@@ -1,11 +1,11 @@
 using System.Collections.ObjectModel;
-using AICollaborationPlatform.App.Models;
-using AICollaborationPlatform.App.Services;
+using AICollaborationPlatform.App.Core;
+using AICollaborationPlatform.App.Shell;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 
-namespace AICollaborationPlatform.App.ViewModels;
+namespace AICollaborationPlatform.App.Features.Jira;
 
 /// <summary>A choice in a filter drop-down. <see cref="Value"/> null means "no filter".</summary>
 public sealed record FilterOption(string Label, string? Value);
@@ -230,6 +230,7 @@ public sealed partial class JiraDataViewModel : PageViewModel
                 var changes = new List<string>();
                 if (result.Issues > 0) changes.Add(result.Issues == 1 ? "1 issue updated" : $"{result.Issues:N0} issues updated");
                 if (result.IssuesRemoved > 0) changes.Add($"{result.IssuesRemoved:N0} removed");
+                if (result.ProjectsRemoved > 0) changes.Add(result.ProjectsRemoved == 1 ? "1 space removed" : $"{result.ProjectsRemoved:N0} spaces removed");
                 ShowRefresh(result.Warnings.Count > 0 ? FetchResultKind.Warning : FetchResultKind.Success,
                     changes.Count == 0 ? $"Up to date · checked at {at}" : $"{string.Join(", ", changes)} · {at}");
                 break;

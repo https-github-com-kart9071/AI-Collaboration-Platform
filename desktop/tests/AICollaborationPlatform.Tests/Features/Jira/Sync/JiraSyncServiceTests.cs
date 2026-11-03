@@ -1,6 +1,4 @@
-using AICollaborationPlatform.App.Models;
-using AICollaborationPlatform.App.Services;
-using AICollaborationPlatform.App.Storage;
+using AICollaborationPlatform.App.Features.Jira;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -170,6 +168,43 @@ public sealed class JiraSyncServiceTests : IDisposable
         Assert.Equal(1, result.IssuesRemoved);
         Assert.Equal(1, Count("issues"));
         Assert.Equal("project = \"ABC\" ORDER BY updated ASC", _jira.IdQueries.Single()); // the whole project, IDs only
+    }
+
+    [Fact]
+    public async Task Refresh_removes_projects_deleted_in_jira_with_all_their_data()
+    {
+        _jira.BoardsByProject["XYZ"] = [new JiraBoard(20, "XYZ board", "scrum", "XYZ")];
+        _jira.SprintsByBoard[20] = [new JiraSprint(200, "Sprint 1", "active", Start, null, null, null, 20)];
+        await CreateService().SyncAsync(new JiraSyncOptions(["ABC", "XYZ"]));
+        _jira.Projects.RemoveAll(p => p.Key == "XYZ"); // the space was deleted in Jira
+        _jira.IssuesByProject.Remove("XYZ");
+        _time.Now = Start.AddMinutes(30);
+
+        var result = await CreateService().SyncAsync(new JiraSyncOptions(["ABC", "XYZ"]));
+
+        Assert.Equal(JiraSyncStatus.Completed, result.Status);
+        Assert.Equal(1, result.ProjectsRemoved);
+        Assert.Empty(result.Warnings); // removed, not "not found"
+        using var db = _db.Open();
+        Assert.Equal(["ABC"], db.GetProjects().Select(p => p.Key));
+        Assert.Equal(2, db.Count("issues"));
+        Assert.Equal(0, db.Count("boards"));
+        Assert.Equal(0, db.Count("sprints"));
+    }
+
+    [Fact]
+    public async Task Refresh_of_only_deleted_projects_fetches_nothing_else()
+    {
+        await CreateService().SyncAsync(new JiraSyncOptions(["XYZ"]));
+        _jira.Projects.RemoveAll(p => p.Key == "XYZ");
+        _jira.SearchedJql.Clear();
+
+        var result = await CreateService().SyncAsync(new JiraSyncOptions(["XYZ"]));
+
+        Assert.Equal(1, result.ProjectsRemoved);
+        Assert.Equal(0, result.Projects);
+        Assert.Empty(_jira.SearchedJql); // didn't fall back to fetching every project
+        Assert.Equal(0, Count("issues"));
     }
 
     [Fact]

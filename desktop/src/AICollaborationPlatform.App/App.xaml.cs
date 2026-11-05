@@ -3,10 +3,10 @@ using System.Net.Http;
 using System.Windows;
 using System.Windows.Markup;
 using System.Windows.Threading;
-using AICollaborationPlatform.App.Services;
-using AICollaborationPlatform.App.Storage;
-using AICollaborationPlatform.App.ViewModels;
-using AICollaborationPlatform.App.Views;
+using AICollaborationPlatform.App.Core;
+using AICollaborationPlatform.App.Features.Code;
+using AICollaborationPlatform.App.Features.Jira;
+using AICollaborationPlatform.App.Shell;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -106,6 +106,7 @@ public partial class App : Application
         // Changing issues in Jira from the issue panel
         services.AddSingleton<IJiraIssueEditor, JiraIssueEditor>();
         services.AddTransient<JiraConnectionViewModel>();
+        services.AddTransient<CodeConnectionViewModel>();
 
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<MainWindow>();
@@ -114,6 +115,7 @@ public partial class App : Application
         services.AddSingleton<HomeViewModel>();
         services.AddSingleton<JiraViewModel>();
         services.AddSingleton<JiraDataViewModel>();
+        services.AddSingleton<CodeViewModel>();
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

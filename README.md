@@ -41,28 +41,71 @@ dotnet test
 
 ### Project layout
 
+The app is organised **by feature**: everything for one integration (its API client, storage, view models and views) sits in one folder under `Features/`. Shared pieces live in `Core`, `UI` and `Shell`.
+
 ```
 desktop/
 ├── AICollaborationPlatform.slnx
 ├── src/AICollaborationPlatform.App/
-│   ├── App.xaml(.cs)      Startup: logging, dependency injection, global error handling, theme
-│   ├── Views/             XAML windows and pages (MainWindow, HomeView, JiraView)
-│   ├── ViewModels/        MVVM view models, one per page (CommunityToolkit.Mvvm)
-│   ├── Services/          App services (navigation now; Jira client in Story 4)
-│   ├── Models/            Plain data types
-│   └── Storage/           Local paths, settings and (later) the SQLite database
-└── tests/AICollaborationPlatform.Tests/   xUnit tests
+│   ├── App.xaml(.cs)          Startup: logging, dependency injection, global error handling
+│   │
+│   ├── Shell/                 The main window and what ties features together
+│   │   ├── MainWindow, MainViewModel, PageViewModel
+│   │   ├── NavigationService, NavigationItem
+│   │   ├── Dialogs/           IDialogService: opens windows so view models stay testable
+│   │   └── Home/              Home page
+│   │
+│   ├── Core/                  App-wide, non-visual services (no feature code)
+│   │   ├── Storage/           AppPaths, settings.json, Windows Credential Manager
+│   │   └── Services/          BrowserLauncher
+│   │
+│   ├── UI/                    Shared WPF building blocks (no feature code)
+│   │   ├── Themes/            DarkTheme.xaml: colours, styles, scrollbars, tables, tabs
+│   │   ├── Controls/          Spinner
+│   │   ├── Behaviors/         SmoothScroll
+│   │   ├── Converters/        Visibility and format converters
+│   │   └── Windows/           DarkTitleBar
+│   │
+│   └── Features/
+│       ├── Jira/
+│       │   ├── JiraView, JiraViewModel   The Jira page
+│       │   ├── JiraResources.xaml        Jira-only visuals (status lozenges, icons, avatars)
+│       │   ├── Connection/    Connect dialog, session, auth, URL checks
+│       │   ├── Api/           REST client, retries, JSON/ADF parsing, Jira data types
+│       │   ├── Sync/          Fetch/Refresh from Jira into SQLite
+│       │   ├── Storage/       JiraDatabase (SQLite)
+│       │   ├── Browse/        Jira data page: projects, issue table, issue panel
+│       │   └── Editing/       Edit issues and add comments
+│       └── Code/              (next) GitHub / GitLab repositories, see Features/Code/README.md
+│
+└── tests/AICollaborationPlatform.Tests/   xUnit tests, same folders as the app
+    ├── Core/  Shell/  UI/
+    ├── Features/Jira/{Api,Connection,Sync,Storage,Browse,Editing}/
+    └── TestDoubles/           Shared fakes
 ```
+
+**Rules that keep it tidy**
+
+- **Namespaces follow the area, not every sub-folder:** `AICollaborationPlatform.App.Core`, `.UI`, `.Shell`, `.Features.Jira`. A feature's sub-folders only group its files.
+- **`Core` and `UI` never reference a feature.** The one exception is `Core/Storage/AppSettings.cs`, the shape of `settings.json`, which holds each feature's saved section (e.g. `SavedJiraConnection`, owned by the Jira feature).
+- **Features don't reference each other directly.** If two features need to talk (e.g. linking commits to Jira issues), add a small interface the other feature implements.
+- **Adding a feature:**
+  1. Create `Features/<Name>/`.
+  2. Register its services and page in `App.ConfigureServices`.
+  3. Map its view model to its view with a `DataTemplate` in `App.xaml`.
+  4. Merge its `<Name>Resources.xaml` there, if it has one.
+  5. Add tests under `tests/.../Features/<Name>/`.
 
 ### Key concepts (for learning C#/WPF)
 
 | Concept | Where to look |
 |---|---|
-| **MVVM**: views bind to view models and have no logic in code-behind | `ViewModels/MainViewModel.cs`, `Views/MainWindow.xaml` |
+| **MVVM**: views bind to view models and have no logic in code-behind | `Shell/MainViewModel.cs`, `Shell/MainWindow.xaml` |
 | **Commands**: `[RelayCommand]` generates `OpenJiraCommand` | `MainViewModel.OpenJira()` |
-| **Observable properties**: `[ObservableProperty]` generates `ConnectionStatus` | `ViewModels/JiraViewModel.cs` |
+| **Observable properties**: `[ObservableProperty]` generates `StatusMessage` | `Features/Jira/Connection/JiraConnectionViewModel.cs` |
 | **Dependency injection**: services are registered once and injected through constructors | `App.ConfigureServices` |
 | **DataTemplates**: a view model type maps to its view | `App.xaml` |
+| **Resource dictionaries**: the theme is split into shared and feature files | `UI/Themes/DarkTheme.xaml`, `Features/Jira/JiraResources.xaml` |
 | **Structured logging**: Serilog through `ILogger<T>` | `App.OnStartup`, `NavigationService` |
 
 ### Logs

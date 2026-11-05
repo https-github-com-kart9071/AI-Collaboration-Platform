@@ -1,4 +1,5 @@
 using System.Windows;
+using AICollaborationPlatform.App.Features.Code;
 using AICollaborationPlatform.App.Features.Jira;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -16,11 +17,9 @@ public sealed class DialogService(IServiceProvider services) : IDialogService
 
     public bool ShowCodeConnectionDialog()
     {
-        // The connect dialog (choose a host, enter a token, test it) is the next part of Story 8.
-        MessageBox.Show(Application.Current.MainWindow!,
-            "Connecting GitHub, GitLab and other Git hosts is coming next.",
-            "Connect a code host", MessageBoxButton.OK, MessageBoxImage.Information);
-        return false;
+        var viewModel = services.GetRequiredService<CodeConnectionViewModel>();
+        var dialog = new CodeConnectionDialog(viewModel) { Owner = Application.Current.MainWindow };
+        return dialog.ShowDialog() == true;
     }
 
     public bool Confirm(string title, string message) =>

@@ -106,6 +106,7 @@ public partial class App : Application
         // Changing issues in Jira from the issue panel
         services.AddSingleton<IJiraIssueEditor, JiraIssueEditor>();
         services.AddTransient<JiraConnectionViewModel>();
+        services.AddTransient<CodeConnectionViewModel>();
 
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<MainWindow>();
